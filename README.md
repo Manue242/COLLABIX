@@ -138,11 +138,13 @@ npm install
 npm run dev
 ```
 
-<!-- 
+<!--
   Ajouter ici :
-  - Les dépendances supplémentaires installées
-  - La structure des composants
-  - Les variables d'env VITE_* utilisées
+  - Dépendances installées (player vidéo, canvas, state management...)
+  - Structure des composants
+  - Props du composant <VideoReviewer /> (videoSrc, userId, sessionId)
+  - Variables d'env VITE_* utilisées
+  - Librairie UI choisie
 -->
 
 ---
@@ -176,7 +178,6 @@ Chaque pôle travaille sur son propre préfixe :
 | Pôle | Format | Exemple |
 |------|--------|---------|
 | Dev (backend / frontend) | `dev/<feature>` | `dev/annotations-api` |
-| Cyber | `cyber/<feature>` | `cyber/auth-jwt` |
 | Data / IA | `data/<feature>` | `data/video-analysis` |
 
 ### Créer une branche
@@ -184,9 +185,6 @@ Chaque pôle travaille sur son propre préfixe :
 ```bash
 # Dev
 git checkout -b dev/ma-feature
-
-# Cyber
-git checkout -b cyber/ma-feature
 
 # Data
 git checkout -b data/ma-feature
