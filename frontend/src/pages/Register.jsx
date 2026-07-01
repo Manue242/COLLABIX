@@ -1,7 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext.jsx'
 
 export default function Register() {
+  const { register } = useAuth()
   const navigate = useNavigate()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -19,9 +21,9 @@ export default function Register() {
     }
     setSubmitting(true)
     try {
-      // TODO: brancher sur POST /auth/register quand l'endpoint backend existera
-      // Pour l'instant on redirige vers le login
-      navigate('/login')
+      // POST /auth/register : { username, email, password }
+      await register(name, email, password)
+      navigate('/app')
     } catch (err) {
       setError(err.message || "Erreur lors de la création du compte")
     } finally {
@@ -49,14 +51,14 @@ export default function Register() {
           </div>
 
           <div className="auth-field">
-            <label>Nom complet</label>
+            <label>Nom d'utilisateur</label>
             <input
               type="text"
-              placeholder="Jean Dupont"
+              placeholder="jean_dupont"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              autoComplete="name"
+              autoComplete="username"
             />
           </div>
 

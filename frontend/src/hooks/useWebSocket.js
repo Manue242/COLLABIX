@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
 /**
- * Hook générique de connexion WebSocket.
- * À brancher sur le serveur fourni par l'équipe backend (env var ou prop url).
+ * Hook WebSocket — connecté au backend FastAPI.
  *
- * Convention de message attendue (JSON) :
- * { type: 'annotation' | 'comment', payload: {...} }
+ * URL attendue : ws://localhost:5173/ws/{video_id}?user_id={user_id}
+ * (Vite proxie /ws → ws://backend:8000/ws/...)
+ *
+ * Format des messages backend (discriminant "type") :
+ *   { type: 'cursor',             x, y, user_id }
+ *   { type: 'annotation_added',   annotation: { id, video_id, type, content, timestamp, color, ... } }
+ *   { type: 'annotation_deleted', id }
+ *   { type: 'error',              detail }
  */
 export default function useWebSocket(url) {
   const socketRef = useRef(null)
@@ -18,7 +23,7 @@ export default function useWebSocket(url) {
     const socket = new WebSocket(url)
     socketRef.current = socket
 
-    socket.onopen = () => setIsConnected(true)
+    socket.onopen  = () => setIsConnected(true)
     socket.onclose = () => setIsConnected(false)
     socket.onerror = (err) => console.error('WebSocket error:', err)
 
@@ -31,15 +36,14 @@ export default function useWebSocket(url) {
       }
     }
 
-    return () => {
-      socket.close()
-    }
+    return () => socket.close()
   }, [url])
 
-  const send = useCallback((type, payload) => {
+  // send accepte un objet message complet : { type, ...champs }
+  const send = useCallback((message) => {
     const socket = socketRef.current
     if (socket && socket.readyState === WebSocket.OPEN) {
-      socket.send(JSON.stringify({ type, payload }))
+      socket.send(JSON.stringify(message))
     } else {
       console.warn('WebSocket non connecté, message non envoyé')
     }

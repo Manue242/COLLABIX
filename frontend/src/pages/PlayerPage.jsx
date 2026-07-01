@@ -8,8 +8,6 @@ import { exportAnnotations, downloadAnnotationsAsFile } from '../utils/exportAnn
 import ColorPicker from '../components/ColorPicker.jsx'
 import { mockVideos } from '../data/mockVideos.js'
 
-const WS_URL = import.meta.env.VITE_WS_URL || null
-
 const TOOLS = [
   { id: 'arrow',     label: 'Flèche',    icon: '↗' },
   { id: 'rectangle', label: 'Rectangle', icon: '▭' },
@@ -38,13 +36,44 @@ export default function PlayerPage() {
   const [volume, setVolume] = useState(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+  // URL WebSocket proxiée par Vite → backend /ws/{video_id}?user_id=...
+  const userId = user?.id || user?.email || 'anonymous'
+  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const WS_URL = `${wsProtocol}//${window.location.host}/ws/${id}?user_id=${encodeURIComponent(userId)}`
+
   const { isConnected, messages, send } = useWebSocket(WS_URL)
   const video = mockVideos.find(v => v.id === id) || mockVideos[0]
 
+  // Charger les annotations persistées depuis le backend
+  useEffect(() => {
+    fetch(`/api/annotations?video_id=${id}`)
+      .then(r => r.json())
+      .then(data => {
+        const drawings = data
+          .filter(a => a.type === 'drawing')
+          .map(a => { try { return { ...JSON.parse(a.content), id: a.id, timestamp: a.timestamp, color: a.color } } catch { return null } })
+          .filter(Boolean)
+        const loadedComments = data
+          .filter(a => a.type === 'comment')
+          .map(a => ({ id: a.id, text: a.content, timestamp: a.timestamp, author: a.username || 'Utilisateur' }))
+        setAnnotations(drawings)
+        setComments(loadedComments)
+      })
+      .catch(() => {})
+  }, [id])
+
+  // Traiter les messages WS entrants des autres utilisateurs
   useEffect(() => {
     messages.forEach(msg => {
-      if (msg.type === 'annotation')    setAnnotations(p => [...p, msg.payload])
-      else if (msg.type === 'comment')  setComments(p => [...p, msg.payload])
+      if (msg.type === 'annotation_added') {
+        const a = msg.annotation
+        try {
+          const shape = { ...JSON.parse(a.content), id: a.id, timestamp: a.timestamp, color: a.color }
+          setAnnotations(p => p.some(x => x.id === a.id) ? p : [...p, shape])
+        } catch {}
+      } else if (msg.type === 'annotation_deleted') {
+        setAnnotations(p => p.filter(a => a.id !== msg.id))
+      }
     })
   }, [messages])
 
@@ -116,15 +145,69 @@ export default function PlayerPage() {
     const ratio = (e.clientX - rect.left) / rect.width
     if (videoRef.current) videoRef.current.currentTime = ratio * duration
   }
-  const handleAnnotationCreate = (a) => { setAnnotations(p => [...p, a]); send('annotation', a) }
-  const handleAnnotationDelete  = (id) => { setAnnotations(p => p.filter(a => a.id !== id)); send('annotationDelete', { id }) }
-  const handleAnnotationsClear  = ()   => { setAnnotations([]); send('annotationsClear', {}) }
-  const handleAddComment        = (c)  => { setComments(p => [...p, c]); send('comment', c) }
-  const handleSeekTime          = (t)  => { if (videoRef.current) videoRef.current.currentTime = t }
-  const handleExport            = ()   => {
+  const handleAnnotationCreate = async (a) => {
+    try {
+      const res = await fetch('/api/annotations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          video_id: id,
+          type: 'drawing',
+          content: JSON.stringify(a),
+          timestamp: currentTime,
+          color: a.color || color,
+        }),
+      })
+      const saved = await res.json()
+      const shape = { ...a, id: saved.id }
+      setAnnotations(p => [...p, shape])
+      send({ type: 'annotation_added', annotation: saved })
+    } catch {
+      setAnnotations(p => [...p, a])
+    }
+  }
+
+  const handleAnnotationDelete = async (annotationId) => {
+    setAnnotations(p => p.filter(a => a.id !== annotationId))
+    send({ type: 'annotation_deleted', id: annotationId })
+    fetch(`/api/annotations/${annotationId}`, { method: 'DELETE' }).catch(() => {})
+  }
+
+  const handleAnnotationsClear = () => {
+    const visible = annotations.filter(a => Math.abs(a.timestamp - currentTime) < 0.5)
+    setAnnotations(p => p.filter(a => Math.abs(a.timestamp - currentTime) >= 0.5))
+    visible.forEach(a => {
+      send({ type: 'annotation_deleted', id: a.id })
+      fetch(`/api/annotations/${a.id}`, { method: 'DELETE' }).catch(() => {})
+    })
+  }
+
+  const handleAddComment = async (c) => {
+    try {
+      const res = await fetch('/api/annotations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          video_id: id,
+          type: 'comment',
+          content: c.text,
+          timestamp: c.timestamp ?? currentTime,
+          color: '#3B82F6',
+        }),
+      })
+      const saved = await res.json()
+      setComments(p => [...p, { ...c, id: saved.id }])
+    } catch {
+      setComments(p => [...p, c])
+    }
+  }
+
+  const handleSeekTime = (t) => { if (videoRef.current) videoRef.current.currentTime = t }
+
+  const handleExport = () => {
     downloadAnnotationsAsFile(
-      exportAnnotations({ videoSrc: video.title, annotations, comments }),
-      `annotations-${video.id}.json`
+      exportAnnotations({ videoId: id, annotations, comments }),
+      `annotations-${id}.json`
     )
   }
 

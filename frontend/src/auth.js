@@ -1,22 +1,22 @@
-// Helper d'authentification — parle au Core NestJS (backend/).
-// Repris du starter officiel : login, stockage du token, fetch authentifié.
-const API = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
-const TOKEN_KEY = 'hackathon_token'
+// Helper d'authentification — API FastAPI backend (port 8000, proxié par Vite)
+// Endpoints : POST /auth/login  POST /auth/register  GET /auth/me
+const TOKEN_KEY = 'collabix_token'
 
-export async function login(username, password) {
-  const res = await fetch(`${API}/auth/login`, {
+export async function login(email, password) {
+  const res = await fetch('/auth/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password })
+    body: JSON.stringify({ email, password }),
   })
   if (!res.ok) throw new Error('Identifiants invalides')
   const data = await res.json()
-  localStorage.setItem(TOKEN_KEY, data.accessToken)
-  return data.user
+  localStorage.setItem(TOKEN_KEY, data.access_token)
+  return data
 }
 
 export function logout() {
   localStorage.removeItem(TOKEN_KEY)
+  localStorage.removeItem('collabix_user')
 }
 
 export function getToken() {
@@ -26,11 +26,11 @@ export function getToken() {
 // fetch authentifié : ajoute automatiquement Authorization: Bearer <token>
 export async function authFetch(path, options = {}) {
   const token = getToken()
-  return fetch(`${API}${path}`, {
+  return fetch(path, {
     ...options,
     headers: {
       ...(options.headers ?? {}),
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
-    }
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
   })
 }
