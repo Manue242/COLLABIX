@@ -20,12 +20,9 @@ Afin de supprimer le stockage d'états côté serveur (Session Stateless) et de 
 
 * **Endpoint d'authentification :** `POST /auth/login`
 * **Format du payload attendu :**
-```json
-{
-  "username": "string",
-  "password": "string"
-}
+
 ---
+
 
 ## 🚀 3. Routage Sécurisé & Contrat d'Interface
 
@@ -58,6 +55,8 @@ Cette implémentation technique couvre directement les risques identifiés par l
 * **Elevation of Privilege (Couverte) :** Le serveur vérifie la structure interne du JWT avant de délivrer la clé premium, empêchant la modification malveillante des privilèges client.
 * **Denial of Service & Asphyxie (Couverte) :** Le Rate-Limiter NestJS absorbe la charge des scripts malveillants avant qu'ils n'atteignent la couche applicative lourde.
 * **Traçabilité RGPD :** Les rejets d'attaques (Erreurs 429) génèrent des logs horodatés (IP, Timestamp, Route ciblée) isolés, essentiels pour la détection d'incidents par l'équipe d'exploitation.
+  
+```json
 {
   "username": "string",
   "password": "string"
