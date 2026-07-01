@@ -47,11 +47,17 @@ export default function UploadVideo() {
     setError('')
     setSubmitting(true)
     try {
-      // TODO: POST /api/videos avec FormData quand le backend sera prêt
-      await new Promise(r => setTimeout(r, 1000)) // simulation upload
-      navigate('/app')
-    } catch {
-      setError("Erreur lors de la publication")
+      const formData = new FormData()
+      formData.append('file', videoFile)
+      const res = await fetch('/api/videos/upload', { method: 'POST', body: formData })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || `Erreur ${res.status}`)
+      }
+      const { filename } = await res.json()
+      navigate(`/app/player/${filename}`)
+    } catch (err) {
+      setError(err.message || "Erreur lors de la publication")
     } finally {
       setSubmitting(false)
     }

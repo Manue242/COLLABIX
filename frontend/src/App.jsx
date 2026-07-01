@@ -11,6 +11,7 @@ import Home from './pages/Home.jsx'
 import Catalogue from './pages/Catalogue.jsx'
 import PlayerPage from './pages/PlayerPage.jsx'
 import UploadVideo from './pages/UploadVideo.jsx'
+import AIPage from './pages/AIPage.jsx'
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/catalogue"       element={<ProtectedRoute><Catalogue /></ProtectedRoute>} />
             <Route path="/app/player/:id"  element={<ProtectedRoute><PlayerPage /></ProtectedRoute>} />
             <Route path="/upload"          element={<ProtectedRoute><UploadVideo /></ProtectedRoute>} />
+            <Route path="/ai"              element={<ProtectedRoute><AIPage /></ProtectedRoute>} />
             <Route path="*"                element={<Navigate to="/login" replace />} />
           </Routes>
         </BrowserRouter>

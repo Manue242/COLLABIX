@@ -42,7 +42,14 @@ export default function PlayerPage() {
   const WS_URL = `${wsProtocol}//${window.location.host}/ws/${id}?user_id=${encodeURIComponent(userId)}`
 
   const { isConnected, messages, send } = useWebSocket(WS_URL)
-  const video = mockVideos.find(v => v.id === id) || mockVideos[0]
+  // Cherche dans mockVideos, sinon construit un objet à partir du filename backend
+  const video = mockVideos.find(v => v.id === id) || {
+    id,
+    title: id,
+    category: '',
+    src: `/videos/${id}`,
+    gradient: 'linear-gradient(135deg,#1e1b4b,#4338ca)',
+  }
 
   // Charger les annotations persistées depuis le backend
   useEffect(() => {
