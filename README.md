@@ -133,19 +133,15 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 
 ### Tests
 
-Installer les dépendances de test :
+Lancer les tests via Docker (recommandé) :
 
 ```bash
-pip install -r requirements-dev.txt
+docker-compose --profile test run --rm tests
 ```
 
-Lancer les tests (PostgreSQL doit tourner avec une DB `collabix_test`) :
+La DB `collabix_test` est créée automatiquement au premier `docker-compose up --build`.
 
-```bash
-pytest
-```
-
-Les tests utilisent une base dédiée `collabix_test` — elle est créée et supprimée automatiquement à chaque run.
+Les tables de test sont créées et supprimées automatiquement à chaque run.
 
 ### Dev local (sans Docker)
 

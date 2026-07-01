@@ -2,9 +2,9 @@ import os
 import uuid
 from pathlib import Path
 
-import pytest
 import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy.pool import NullPool
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 TEST_DATABASE_URL = os.getenv(
@@ -13,13 +13,18 @@ TEST_DATABASE_URL = os.getenv(
 )
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def test_engine():
     from database import Base
     import models.user  # noqa: F401
     import models.annotation  # noqa: F401
 
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False, connect_args={"ssl": False})
+    engine = create_async_engine(
+        TEST_DATABASE_URL,
+        echo=False,
+        connect_args={"ssl": False},
+        poolclass=NullPool,
+    )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
@@ -29,7 +34,7 @@ async def test_engine():
     await engine.dispose()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def client(test_engine):
     from main import app
     from database import get_db
@@ -43,7 +48,11 @@ async def client(test_engine):
     Path("uploads").mkdir(exist_ok=True)
     app.dependency_overrides[get_db] = override_get_db
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        follow_redirects=True,
+    ) as ac:
         yield ac
 
     app.dependency_overrides.clear()
