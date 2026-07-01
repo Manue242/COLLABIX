@@ -20,10 +20,8 @@ website/
 
 ## Prérequis
 
-- [Docker](https://www.docker.com/) + Docker Compose
-- **Backend** : Python 3.12+
-- **Frontend** : Node.js 22+
-- **AI/Data** : Python 3.12+, Jupyter
+- [Docker](https://www.docker.com/) + Docker Compose — **suffisant pour faire tourner l'app complète**
+- Python 3.12+ et Node.js 22+ uniquement pour le développement local sans Docker
 
 ---
 
@@ -241,11 +239,18 @@ DATABASE_URL=postgresql+asyncpg://collabix:collabix@localhost:5432/collabix?ssl=
 
 > **Section à compléter par le dev frontend**
 
+Via Docker (recommandé) : inclus dans `docker-compose up --build`, accessible sur `http://localhost:5173`.
+
+Dev local sans Docker :
+
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+
+Le proxy Vite redirige automatiquement `/api`, `/auth`, `/videos`, `/hls`, `/ws` vers le backend.  
+En local il pointe sur `http://localhost:8000` ; dans Docker sur `http://backend:8000` via `VITE_BACKEND_URL`.
 
 <!--
   Ajouter ici :

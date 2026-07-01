@@ -11,6 +11,14 @@
 - [x] `GET /auth/me` ✅
 - [x] `POST /auth/password` ✅
 
+### Docker / Infrastructure
+
+- [x] `docker-compose up --build` ✅ — lance db + backend + frontend en un seul commande
+- [x] Healthcheck backend ✅ — frontend attend que l'API soit prête avant de démarrer
+- [x] Proxy Vite configuré pour Docker ✅ — `VITE_BACKEND_URL=http://backend:8000` (fallback `localhost:8000` en local)
+- [x] Routes proxiées ✅ — `/api`, `/auth`, `/videos`, `/hls`, `/ws`
+- [x] CORS ouvert ✅ — `allow_origins=["*"]` (sécurité gérée par l'équipe cyber)
+
 ### CI / GitHub Actions
 
 - [x] Workflow `.github/workflows/backend-ci.yml` ✅ — déclenché sur push/PR vers `develop` (dossier `backend/`)
