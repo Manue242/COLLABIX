@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from models.annotation import Annotation
-from schemas.annotation import AnnotationCreate, AnnotationExportItem, ExportPayload
+from schemas.annotation import AnnotationCreate, AnnotationExportItem, AnnotationUpdate, ExportPayload
 
 
 async def create(db: AsyncSession, data: AnnotationCreate) -> Annotation:
@@ -20,6 +20,19 @@ async def get_by_video(db: AsyncSession, video_id: str) -> list[Annotation]:
         .order_by(Annotation.timestamp)
     )
     return result.scalars().all()
+
+
+async def update(db: AsyncSession, annotation_id: str, data: AnnotationUpdate) -> Annotation | None:
+    result = await db.execute(select(Annotation).where(Annotation.id == annotation_id))
+    annotation = result.scalar_one_or_none()
+    if not annotation:
+        return None
+    updates = data.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(annotation, field, value)
+    await db.commit()
+    await db.refresh(annotation)
+    return annotation
 
 
 async def delete(db: AsyncSession, annotation_id: str) -> bool:

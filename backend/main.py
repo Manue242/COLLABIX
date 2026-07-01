@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from database import engine, Base
 import models.user  # noqa: F401 — requis pour create_all
 import models.annotation  # noqa: F401 — requis pour create_all
-from routers import health, annotations, ws, videos, auth
+from routers import health, annotations, ws, videos, auth, sessions
 
 load_dotenv()
 
@@ -40,3 +40,4 @@ app.include_router(health.router)
 app.include_router(annotations.router)
 app.include_router(videos.router)
 app.include_router(ws.router)
+app.include_router(sessions.router)

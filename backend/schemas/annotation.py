@@ -12,6 +12,11 @@ class AnnotationCreate(BaseModel):
     user_id: str | None = None
 
 
+class AnnotationUpdate(BaseModel):
+    content: str | None = None
+    color: str | None = None
+
+
 class AnnotationResponse(BaseModel):
     id: UUID
     video_id: str
