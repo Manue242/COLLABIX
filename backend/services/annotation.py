@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from models.annotation import Annotation
 from models.user import User
-from schemas.annotation import AnnotationCreate, AnnotationExportItem, ExportPayload, AnnotationResponse
+from schemas.annotation import AnnotationCreate, AnnotationExportItem, AnnotationUpdate, ExportPayload, AnnotationResponse
 
 
 async def create(db: AsyncSession, data: AnnotationCreate) -> Annotation:
@@ -37,6 +37,19 @@ async def list_with_username(db: AsyncSession, video_id: str) -> list[Annotation
         )
         for a in annotations
     ]
+
+
+async def update(db: AsyncSession, annotation_id: str, data: AnnotationUpdate) -> Annotation | None:
+    result = await db.execute(select(Annotation).where(Annotation.id == annotation_id))
+    annotation = result.scalar_one_or_none()
+    if not annotation:
+        return None
+    updates = data.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(annotation, field, value)
+    await db.commit()
+    await db.refresh(annotation)
+    return annotation
 
 
 async def delete(db: AsyncSession, annotation_id: str) -> bool:
