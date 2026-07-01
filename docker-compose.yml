@@ -36,6 +36,38 @@ services:
       retries: 15
       start_period: 10s
 
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama_models:/root/.ollama
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    entrypoint: >
+      sh -c "until ollama list >/dev/null 2>&1; do echo 'waiting for ollama...'; sleep 2; done; ollama pull llama3.2"
+    restart: "no"
+
+  ai-api:
+    build: ./ai-data/indexation-semantique
+    ports:
+      - "8080:8080"
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      - hf_cache:/root/.cache/huggingface
+      - whisper_cache:/root/.cache/whisper
+      - chroma_data:/app/chroma_db
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
   frontend:
     image: node:22-alpine
     working_dir: /app
@@ -46,6 +78,7 @@ services:
       - "5173:5173"
     environment:
       - VITE_BACKEND_URL=http://backend:8000
+      - VITE_AI_URL=http://ai-api:8080
     command: sh -c "npm install && npm run dev"
     depends_on:
       backend:
@@ -67,3 +100,7 @@ services:
 
 volumes:
   postgres_data:
+  ollama_models:
+  hf_cache:
+  whisper_cache:
+  chroma_data:
