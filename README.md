@@ -94,22 +94,45 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 | `GET` | `/auth/me` | ✅ | Profil de l'utilisateur connecté |
 | `POST` | `/auth/password` | ✅ | Changer le mot de passe |
 
-**Vidéos & Annotations**
+**Vidéos**
 
 | Méthode | Route | Auth requise | Description |
 |---------|-------|:---:|-------------|
 | `GET` | `/api/health` | — | Santé de l'API |
-| `POST` | `/api/videos/upload` | — | Upload une vidéo (mp4, webm, ogg) |
+| `POST` | `/api/videos/upload` | — | Upload vidéo (mp4, webm, ogg) — max 500MB |
 | `GET` | `/api/videos/` | — | Liste des vidéos disponibles |
 | `GET` | `/videos/{filename}` | — | Stream d'une vidéo |
+| `DELETE` | `/api/videos/{filename}` | — | Supprimer une vidéo du serveur |
+
+**Annotations**
+
+| Méthode | Route | Auth requise | Description |
+|---------|-------|:---:|-------------|
 | `POST` | `/api/annotations` | — | Créer une annotation |
-| `GET` | `/api/annotations?video_id=` | — | Lister les annotations d'une vidéo |
+| `GET` | `/api/annotations?video_id=` | — | Lister (triées par timestamp, avec username) |
+| `PATCH` | `/api/annotations/{id}` | — | Modifier le contenu et/ou la couleur |
 | `DELETE` | `/api/annotations/{id}` | — | Supprimer une annotation |
-| `GET` | `/api/annotations/export?video_id=` | — | Exporter les annotations en JSON propre |
-| `POST` | `/api/annotations/import` | — | Réimporter un fichier JSON d'annotations |
-| `WS` | `/ws/{video_id}` | — | Session collaborative temps réel |
+| `GET` | `/api/annotations/export?video_id=` | — | Exporter en JSON versionné |
+| `POST` | `/api/annotations/import` | — | Réimporter un fichier JSON |
+
+**Collaboration**
+
+| Méthode | Route | Auth requise | Description |
+|---------|-------|:---:|-------------|
+| `WS` | `/ws/{video_id}?user_id=` | — | Session collaborative temps réel |
+| `GET` | `/api/sessions/{video_id}/users` | — | Users connectés sur une vidéo |
 
 > Les routes marquées ✅ nécessitent le header `Authorization: Bearer <token>`
+
+### Format messages WebSocket
+
+```json
+{ "type": "cursor",             "x": 0.42, "y": 0.18, "user_id": "..." }
+{ "type": "annotation_added",   "annotation": { ... } }
+{ "type": "annotation_deleted", "id": "uuid" }
+```
+
+> Messages invalides → le serveur retourne `{"type": "error", "detail": "Invalid WebSocket message format"}`
 
 ### Format réponse annotation (`GET /api/annotations?video_id=`)
 
@@ -151,15 +174,21 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 
 ### Tests
 
-Lancer les tests via Docker (recommandé) :
+**47 tests** — lancer via Docker (recommandé) :
 
 ```bash
 docker-compose --profile test run --rm tests
 ```
 
-La DB `collabix_test` est créée automatiquement au premier `docker-compose up --build`.
+| Fichier | Couverture |
+|---------|-----------|
+| `test_health.py` | Santé de l'API |
+| `test_auth.py` | Register, login, me, change password |
+| `test_annotations.py` | CRUD, export, import, username, PATCH |
+| `test_videos.py` | Upload, formats invalides, taille max, liste, DELETE |
+| `test_sessions.py` | Room vide, users injectés, tri alphabétique |
 
-Les tables de test sont créées et supprimées automatiquement à chaque run.
+La DB `collabix_test` est créée automatiquement au premier `docker-compose up --build`. Les tables sont recréées et nettoyées à chaque run.
 
 ### Dev local (sans Docker)
 
