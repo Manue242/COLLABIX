@@ -88,10 +88,35 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 | Méthode | Route | Description |
 |---------|-------|-------------|
 | `GET` | `/api/health` | Santé de l'API |
+| `POST` | `/api/videos/upload` | Upload une vidéo (mp4, webm, ogg) |
+| `GET` | `/api/videos/` | Liste des vidéos disponibles |
+| `GET` | `/videos/{filename}` | Stream d'une vidéo |
 | `POST` | `/api/annotations` | Créer une annotation |
 | `GET` | `/api/annotations?video_id=` | Lister les annotations d'une vidéo |
 | `DELETE` | `/api/annotations/{id}` | Supprimer une annotation |
+| `GET` | `/api/annotations/export?video_id=` | Exporter les annotations en JSON propre |
+| `POST` | `/api/annotations/import` | Réimporter un fichier JSON d'annotations |
 | `WS` | `/ws/{video_id}` | Session collaborative temps réel |
+
+### Format d'export JSON
+
+```json
+{
+  "version": "1.0",
+  "video_id": "mon-film",
+  "exported_at": "2026-07-01T10:00:00Z",
+  "annotations": [
+    {
+      "id": "uuid",
+      "type": "comment",
+      "content": "Ce plan dure trop longtemps",
+      "timestamp": 42.5,
+      "color": "#ff0000",
+      "user_id": "user_a"
+    }
+  ]
+}
+```
 
 ### Dev local (sans Docker)
 
