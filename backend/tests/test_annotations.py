@@ -109,3 +109,93 @@ async def test_export_import_roundtrip(client):
     r = await client.post("/api/annotations/import", json=payload)
     assert r.status_code == 201
     assert len(r.json()) == 2
+
+
+# --- PATCH ---
+
+async def test_patch_annotation_content_only(client):
+    video_id = str(uuid.uuid4())
+    r = await client.post("/api/annotations", json=make_annotation(video_id))
+    annotation_id = r.json()["id"]
+    original_color = r.json()["color"]
+
+    r = await client.patch(f"/api/annotations/{annotation_id}", json={"content": "Contenu modifié"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["content"] == "Contenu modifié"
+    assert data["color"] == original_color
+
+
+async def test_patch_annotation_color_only(client):
+    video_id = str(uuid.uuid4())
+    r = await client.post("/api/annotations", json=make_annotation(video_id))
+    annotation_id = r.json()["id"]
+    original_content = r.json()["content"]
+
+    r = await client.patch(f"/api/annotations/{annotation_id}", json={"color": "#00ff00"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["color"] == "#00ff00"
+    assert data["content"] == original_content
+
+
+async def test_patch_annotation_both_fields(client):
+    video_id = str(uuid.uuid4())
+    r = await client.post("/api/annotations", json=make_annotation(video_id))
+    annotation_id = r.json()["id"]
+
+    r = await client.patch(
+        f"/api/annotations/{annotation_id}",
+        json={"content": "Nouveau contenu", "color": "#0000ff"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["content"] == "Nouveau contenu"
+    assert data["color"] == "#0000ff"
+
+
+async def test_patch_annotation_not_found(client):
+    r = await client.patch(
+        "/api/annotations/00000000-0000-0000-0000-000000000000",
+        json={"content": "ghost"},
+    )
+    assert r.status_code == 404
+
+
+async def test_patch_annotation_persists(client):
+    video_id = str(uuid.uuid4())
+    r = await client.post("/api/annotations", json=make_annotation(video_id))
+    annotation_id = r.json()["id"]
+
+    await client.patch(f"/api/annotations/{annotation_id}", json={"content": "Persisté"})
+
+    list_r = await client.get(f"/api/annotations?video_id={video_id}")
+    target = next(a for a in list_r.json() if a["id"] == annotation_id)
+    assert target["content"] == "Persisté"
+
+
+async def test_patch_annotation_empty_body_unchanged(client):
+    video_id = str(uuid.uuid4())
+    r = await client.post("/api/annotations", json=make_annotation(video_id))
+    annotation_id = r.json()["id"]
+    original = r.json()
+
+    r = await client.patch(f"/api/annotations/{annotation_id}", json={})
+    assert r.status_code == 200
+    assert r.json()["content"] == original["content"]
+    assert r.json()["color"] == original["color"]
+
+
+async def test_patch_annotation_returns_full_object(client):
+    video_id = str(uuid.uuid4())
+    r = await client.post("/api/annotations", json=make_annotation(video_id))
+    annotation_id = r.json()["id"]
+
+    r = await client.patch(f"/api/annotations/{annotation_id}", json={"content": "Check fields"})
+    assert r.status_code == 200
+    data = r.json()
+    assert "id" in data
+    assert "video_id" in data
+    assert "timestamp" in data
+    assert "created_at" in data
+    assert data["id"] == annotation_id
