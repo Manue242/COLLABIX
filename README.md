@@ -39,11 +39,13 @@ Lancer tous les services :
 docker-compose up --build
 ```
 
-| Service  | URL                        |
-|----------|----------------------------|
-| Frontend | http://localhost:5173      |
-| Backend  | http://localhost:8000      |
-| API Docs | http://localhost:8000/docs |
+| Service         | URL                        |
+|-----------------|----------------------------|
+| Frontend        | http://localhost:5173      |
+| Backend         | http://localhost:8000      |
+| API Docs        | http://localhost:8000/docs |
+| Pipeline IA     | http://localhost:8080      |
+| IA — Page `/ai` | http://localhost:5173/ai   |
 
 ---
 
@@ -237,8 +239,6 @@ DATABASE_URL=postgresql+asyncpg://collabix:collabix@localhost:5432/collabix?ssl=
 
 ## Frontend — React + Vite
 
-> **Section à compléter par le dev frontend**
-
 Via Docker (recommandé) : inclus dans `docker-compose up --build`, accessible sur `http://localhost:5173`.
 
 Dev local sans Docker :
@@ -249,17 +249,56 @@ npm install
 npm run dev
 ```
 
-Le proxy Vite redirige automatiquement `/api`, `/auth`, `/videos`, `/hls`, `/ws` vers le backend.  
-En local il pointe sur `http://localhost:8000` ; dans Docker sur `http://backend:8000` via `VITE_BACKEND_URL`.
+### Stack
 
-<!--
-  Ajouter ici :
-  - Dépendances installées (player vidéo, canvas, state management...)
-  - Structure des composants
-  - Props du composant <VideoReviewer /> (videoSrc, userId, sessionId)
-  - Variables d'env VITE_* utilisées
-  - Librairie UI choisie
--->
+- **React 18** + **Vite 5** — UI et bundler
+- **react-router-dom v6** — routing SPA
+- **Canvas API natif** — outil de dessin overlay sur le player
+- **WebSocket natif** — collaboration temps réel (hook `useWebSocket`)
+- **JWT** stocké en `localStorage` — auth persistante
+
+### Pages
+
+| Route | Composant | Description |
+|-------|-----------|-------------|
+| `/login` | `Login.jsx` | Connexion → JWT |
+| `/register` | `Register.jsx` | Création de compte → auto-login |
+| `/app` | `Home.jsx` | Catalogue des vidéos |
+| `/catalogue` | `Catalogue.jsx` | Navigation par catégorie |
+| `/app/player/:id` | `PlayerPage.jsx` | Player + annotations + canvas + collaboration |
+| `/upload` | `UploadVideo.jsx` | Upload vers `POST /api/videos/upload` |
+| `/ai` | `AIPage.jsx` | Pipeline IA — traitement vidéo + recherche sémantique |
+
+### Composants
+
+| Fichier | Rôle |
+|---------|------|
+| `Header.jsx` | Navigation, thème, déconnexion |
+| `VideoPlayer.jsx` | `<video>` natif avec contrôles |
+| `AnnotationCanvas.jsx` | Overlay canvas — dessin libre, formes, texte, couleurs |
+| `CommentThread.jsx` | Liste de commentaires avec timecodes |
+| `VideoCard.jsx` / `VideoRow.jsx` | Affichage catalogue |
+| `ColorPicker.jsx` | Sélecteur couleur pour les annotations |
+
+### Proxy Vite
+
+| Préfixe | Cible |
+|---------|-------|
+| `/api`, `/auth`, `/videos`, `/hls`, `/ws` | Backend FastAPI (`http://localhost:8000` en local, `http://backend:8000` dans Docker) |
+| `/process`, `/search` | Pipeline IA (`http://localhost:8080` en local, `http://ai-api:8080` dans Docker) |
+
+### Variables d'environnement
+
+| Variable | Défaut local | Description |
+|----------|-------------|-------------|
+| `VITE_BACKEND_URL` | `http://localhost:8000` | URL du backend (injectée par Docker) |
+| `VITE_AI_URL` | `http://localhost:8080` | URL du pipeline IA (injectée par Docker) |
+
+### Auth
+
+- `AuthContext.jsx` — register, login, logout, état utilisateur global
+- `ProtectedRoute.jsx` — redirige vers `/login` si le token est absent
+- `auth.js` — `authFetch(path, options)` ajoute `Authorization: Bearer <token>` automatiquement
 
 ---
 

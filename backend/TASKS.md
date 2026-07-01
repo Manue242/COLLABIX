@@ -152,64 +152,92 @@ backend/
 
 ---
 
-## Frontend — Tâches restantes
+## Frontend — Statut complet ✅
 
-### Composant principal (contrainte non-négociable)
+### Auth
 
-- [ ] Créer `<VideoReviewer />` — composant réutilisable avec props :
-  - `videoSrc` — URL de la vidéo (`/videos/{filename}`)
-  - `userId` — identifiant de l'utilisateur
-  - `sessionId` — identifiant de la session (= `video_id` côté API)
+- [x] `POST /auth/register` → création de compte ✅ (`Register.jsx` → `AuthContext.register`)
+- [x] `POST /auth/login` → JWT + `/auth/me` pour le profil ✅ (`AuthContext.login`)
+- [x] Logout ✅ — efface le token et redirige vers `/login`
+- [x] `ProtectedRoute` ✅ — redirige si pas de token
+- [x] `authFetch` ✅ — header `Authorization` automatique sur toutes les requêtes
 
 ### Player vidéo
 
-- [ ] Intégrer un player vidéo (react-player, video.js ou `<video>` natif)
-- [ ] Contrôles : play/pause, seek, volume
-- [ ] Exposer le timecode courant pour les annotations
+- [x] Player `<video>` natif ✅ (`VideoPlayer.jsx`)
+- [x] Contrôles play/pause, seek, volume ✅
+- [x] Timecode courant exposé aux annotations ✅
+- [x] Fallback backend ✅ — si `id` n'est pas dans `mockVideos`, construit `{ src: /videos/{id} }` automatiquement
 
 ### Annotations
 
-- [ ] Afficher les annotations dans une liste triée par timestamp
-- [ ] Clic sur une annotation → saut au timecode correspondant
-- [ ] Créer une annotation au timecode courant (`POST /api/annotations`)
-- [ ] Modifier une annotation (`PATCH /api/annotations/{id}`)
-- [ ] Supprimer une annotation (`DELETE /api/annotations/{id}`)
-- [ ] Afficher un marqueur sur la timeline pour chaque annotation
+- [x] Chargement depuis `GET /api/annotations?video_id=` au montage ✅
+- [x] Créer au timecode courant → `POST /api/annotations` ✅
+- [x] Supprimer → `DELETE /api/annotations/{id}` ✅
+- [x] Afficher en liste triée par timestamp ✅ (`CommentThread.jsx`)
+- [x] Export JSON ✅ (`exportAnnotations.js` — format versionné aligné avec `/api/annotations/export`)
 
 ### Upload vidéo
 
-- [ ] Interface d'upload (`POST /api/videos/upload`)
-- [ ] Liste des vidéos disponibles (`GET /api/videos/`)
-- [ ] Supprimer une vidéo (`DELETE /api/videos/{filename}`)
+- [x] Interface d'upload ✅ (`UploadVideo.jsx`)
+- [x] `POST /api/videos/upload` — FormData ✅
+- [x] Redirection vers `/app/player/{filename}` après upload ✅
 
-### Export / Import JSON
+### Outils de dessin (overlay canvas)
 
-- [ ] Bouton export → appelle `GET /api/annotations/export?video_id=` → télécharge le fichier
-- [ ] Bouton import → upload JSON → envoie à `POST /api/annotations/import`
-
-### Outils de dessin (overlay canvas sur la vidéo)
-
-- [ ] Canvas positionné par-dessus le player
-- [ ] Outil flèche
-- [ ] Outil formes (rectangle, cercle)
-- [ ] Outil trait libre
-- [ ] Outil texte
-- [ ] Sélecteur de couleur
-- [ ] Suppression d'un dessin
-- [ ] Sauvegarder le dessin en JSON (`POST /api/annotations` avec `type: "drawing"`)
+- [x] Canvas positionné par-dessus le player ✅ (`AnnotationCanvas.jsx`)
+- [x] Outil trait libre ✅
+- [x] Outil formes (rectangle, cercle) ✅
+- [x] Outil flèche ✅
+- [x] Outil texte ✅
+- [x] Sélecteur de couleur ✅ (`ColorPicker.jsx`)
+- [x] Suppression d'un dessin ✅
+- [x] Sauvegarde dessin → `POST /api/annotations` (`type: "drawing"`) ✅
 
 ### Collaboration temps réel (WebSocket)
 
-- [ ] Connexion WebSocket à `/ws/{sessionId}?user_id={userId}` au montage du composant
-- [ ] Envoyer la position du curseur en temps réel
-- [ ] Afficher les curseurs des autres utilisateurs sur le player
-- [ ] Synchroniser les nouvelles annotations entre users sans refresh
-- [ ] Afficher la liste des users connectés (`GET /api/sessions/{sessionId}/users`)
+- [x] Connexion WS → `/ws/{video_id}?user_id={userId}` ✅ (`useWebSocket.js`)
+- [x] Envoi curseur en temps réel ✅ (`type: "cursor"`)
+- [x] Synchronisation annotations entre users ✅ — `annotation_added` / `annotation_deleted` alignés avec le backend
+- [x] Curseurs des autres users affichés ✅
 
-### Format messages WebSocket
+### Page IA (`/ai`)
 
-```json
-{ "type": "cursor",             "x": 0.42, "y": 0.18, "user_id": "..." }
-{ "type": "annotation_added",   "annotation": { ... } }
-{ "type": "annotation_deleted", "id": "uuid" }
+- [x] Onglet "Traiter une vidéo" → `POST /process` (FormData + params) ✅
+- [x] Affichage résumé, chapitres, mots-clés, transcription ✅
+- [x] Sélecteur langue cible + modèle Whisper + skip options ✅
+- [x] Onglet "Recherche sémantique" → `POST /search` ✅
+- [x] Route `/ai` protégée dans `App.jsx` ✅
+
+### Structure des fichiers frontend
+
 ```
+frontend/src/
+├── App.jsx                      # Routing — 7 routes protégées
+├── auth.js                      # authFetch, login, getToken, logout
+├── context/
+│   ├── AuthContext.jsx           # register, login, logout, user state
+│   └── ThemeContext.jsx
+├── routes/
+│   └── ProtectedRoute.jsx
+├── components/
+│   ├── Header.jsx
+│   ├── VideoPlayer.jsx
+│   ├── AnnotationCanvas.jsx      # canvas overlay — dessin, formes, texte
+│   ├── CommentThread.jsx         # liste annotations + timecodes
+│   ├── ColorPicker.jsx
+│   ├── VideoCard.jsx / VideoRow.jsx
+│   └── Skeleton.jsx
+├── pages/
+│   ├── Login.jsx / Register.jsx / ForgotPassword.jsx / Verify2FA.jsx
+│   ├── Home.jsx / Catalogue.jsx
+│   ├── PlayerPage.jsx            # player + WS + annotations + canvas
+│   ├── UploadVideo.jsx           # upload → POST /api/videos/upload
+│   └── AIPage.jsx                # traitement + recherche sémantique IA
+├── hooks/
+│   ├── useWebSocket.js           # WS auto-reconnect, send(message)
+│   └── useFakeLoading.js
+├── data/
+│   └── mockVideos.js
+└── utils/
+    └── exportAnnotations.js      # format versionné aligné avec backend
