@@ -1,0 +1,176 @@
+/* ════════════════════════════════════════
+   CSS VARIABLES — LIGHT MODE (défaut)
+   ════════════════════════════════════════ */
+:root {
+  --bg:               #F8FAFC;
+  --surface:          #ffffff;
+  --surface-2:        #F9FAFB;
+  --border:           #E5E7EB;
+  --border-strong:    #D1D5DB;
+  --text-primary:     #111827;
+  --text-secondary:   #374151;
+  --text-muted:       #6B7280;
+  --text-faint:       #9CA3AF;
+
+  --primary:          #F97316;
+  --primary-hover:    #EA580C;
+  --primary-bg:       #FFF7ED;
+  --primary-border:   #FED7AA;
+  --primary-light:    #FDBA74;
+
+  --shadow-sm:        0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md:        0 4px 16px rgba(0,0,0,0.08);
+  --shadow-lg:        0 8px 32px rgba(0,0,0,0.12);
+}
+
+/* ════════════════════════════════════════
+   CSS VARIABLES — DARK MODE
+   ════════════════════════════════════════ */
+[data-theme="dark"] {
+  --bg:               #0F0F0F;
+  --surface:          #1A1A1A;
+  --surface-2:        #222222;
+  --border:           #2A2A2A;
+  --border-strong:    #3A3A3A;
+  --text-primary:     #F9FAFB;
+  --text-secondary:   #E5E7EB;
+  --text-muted:       #9CA3AF;
+  --text-faint:       #6B7280;
+
+  --primary:          #F97316;
+  --primary-hover:    #FB923C;
+  --primary-bg:       rgba(249,115,22,0.12);
+  --primary-border:   rgba(249,115,22,0.30);
+  --primary-light:    #FDBA74;
+
+  --shadow-sm:        0 1px 3px rgba(0,0,0,0.3);
+  --shadow-md:        0 4px 16px rgba(0,0,0,0.4);
+  --shadow-lg:        0 8px 32px rgba(0,0,0,0.5);
+}
+
+/* ════════════════════════════════════════
+   RESET DE BASE avec variables
+   ════════════════════════════════════════ */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ════════════════════════════════════════
+   COMPOSANTS AVEC VARIABLES
+   ════════════════════════════════════════ */
+
+/* Header */
+.app-header {
+  background: var(--surface);
+  border-bottom: 0.5px solid var(--border);
+  transition: background 0.3s, border-color 0.3s;
+}
+.app-nav-btn { color: var(--text-muted); }
+.app-nav-btn:hover, .app-nav-btn.active {
+  background: var(--primary-bg);
+  color: var(--primary);
+}
+.app-icon-btn {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  color: var(--text-muted);
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.app-icon-btn:hover { background: var(--primary-bg); color: var(--primary); border-color: var(--primary-border); }
+.app-search { background: var(--surface); border-color: var(--border); }
+.app-search.open { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg); }
+.app-search-input { color: var(--text-primary); }
+.app-dropdown {
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow-lg);
+}
+.app-dd-head { border-color: var(--border); }
+.app-dd-name { color: var(--text-primary); }
+.app-dd-item { color: var(--text-secondary); }
+.app-dd-item:hover { background: var(--primary-bg); color: var(--primary); }
+.app-dd-sep { border-color: var(--border); }
+
+/* Pages */
+.page { background: var(--bg); }
+.home-main, .catalogue-main, .upload-main { background: var(--bg); }
+
+/* Section titles */
+.vrow-title, .home-section-label, .catalogue-title { color: var(--text-primary); }
+
+/* Video cards */
+.vcard { background: var(--surface); border-color: var(--border); }
+.vcard:hover { box-shadow: 0 6px 24px rgba(249,115,22,0.15); border-color: var(--primary-border); }
+.vcard-title { color: var(--text-primary); }
+.vcard-date { color: var(--text-faint); }
+.vcard-progress { background: var(--border); }
+
+/* Catalogue filters */
+.catalogue-filter-btn {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-muted);
+}
+.catalogue-filter-btn:hover { border-color: var(--primary-border); color: var(--primary); }
+.catalogue-filter-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+/* Upload card */
+.upload-card { background: var(--surface); border-color: var(--border); }
+.upload-card-title { color: var(--text-faint); }
+.upload-field label { color: var(--text-secondary); }
+.upload-field input,
+.upload-field textarea,
+.upload-field select {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+.upload-field input:focus,
+.upload-field textarea:focus,
+.upload-field select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-bg);
+}
+.upload-dropzone { background: var(--primary-bg); border-color: var(--primary-border); }
+.upload-dropzone:hover, .upload-dropzone.dragging { background: var(--primary-bg); border-color: var(--primary); }
+.upload-drop-title { color: var(--text-primary); }
+
+/* Auth */
+.auth-screen { background: var(--bg); }
+.auth-right { background: var(--bg); }
+.auth-form-header h1 { color: var(--text-primary); }
+.auth-form-header p { color: var(--text-muted); }
+.auth-field label { color: var(--text-secondary); }
+.auth-field input {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+.auth-field input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-bg); }
+.auth-field input::placeholder { color: var(--text-faint); }
+.auth-switch { color: var(--text-muted); }
+.auth-switch a { color: var(--primary); }
+
+/* Comment thread */
+.ct-wrap { background: var(--surface); }
+.ct-header { border-color: var(--border); }
+.ct-count { color: var(--text-primary); }
+.ct-sort { color: var(--text-muted); }
+.ct-sort:hover { background: var(--surface-2); color: var(--text-primary); }
+.ct-add { border-color: var(--border); background: var(--surface-2); }
+.ct-input { border-color: var(--border); color: var(--text-primary); }
+.ct-input::placeholder { color: var(--text-faint); }
+.ct-item { border-color: var(--border); }
+.ct-name { color: var(--text-primary); }
+.ct-ago  { color: var(--text-faint); }
+.ct-text { color: var(--text-secondary); }
+.ct-act  { color: var(--text-muted); }
+.ct-act:hover { background: var(--surface-2); color: var(--text-primary); }
+.ct-reply-text { color: var(--text-secondary); }
+.ct-reply-input { border-color: var(--border); color: var(--text-primary); }
