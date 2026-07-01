@@ -15,11 +15,13 @@ load_dotenv()
 UPLOAD_DIR = Path("uploads")
 HLS_DIR = Path("media/hls")
 
+# Créer les dossiers avant l'app — StaticFiles vérifie leur existence à la création
+UPLOAD_DIR.mkdir(exist_ok=True)
+HLS_DIR.mkdir(parents=True, exist_ok=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    UPLOAD_DIR.mkdir(exist_ok=True)
-    HLS_DIR.mkdir(parents=True, exist_ok=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -29,7 +31,7 @@ app = FastAPI(title="Collabix API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
