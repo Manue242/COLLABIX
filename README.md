@@ -79,6 +79,27 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 - **FastAPI** — framework API
 - **Uvicorn** — serveur ASGI
 - **Pydantic** — validation des données
+- **SQLAlchemy (async)** — ORM
+- **PostgreSQL** — base de données
+- **asyncpg** — driver PostgreSQL async
+
+### Endpoints
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/api/health` | Santé de l'API |
+| `POST` | `/api/annotations` | Créer une annotation |
+| `GET` | `/api/annotations?video_id=` | Lister les annotations d'une vidéo |
+| `DELETE` | `/api/annotations/{id}` | Supprimer une annotation |
+| `WS` | `/ws/{video_id}` | Session collaborative temps réel |
+
+### Dev local (sans Docker)
+
+Mettre à jour le `.env` avec `@localhost` à la place de `@db` :
+
+```env
+DATABASE_URL=postgresql+asyncpg://collabix:collabix@localhost:5432/collabix?ssl=false
+```
 
 ---
 
@@ -118,6 +139,39 @@ pip install -r requirements.txt
   - Les modèles utilisés
   - Les sources de données
 -->
+
+---
+
+## Conventions Git
+
+### Branches
+
+Chaque pôle travaille sur son propre préfixe :
+
+| Pôle | Format | Exemple |
+|------|--------|---------|
+| Dev (backend / frontend) | `dev/<feature>` | `dev/annotations-api` |
+| Cyber | `cyber/<feature>` | `cyber/auth-jwt` |
+| Data / IA | `data/<feature>` | `data/video-analysis` |
+
+### Créer une branche
+
+```bash
+# Dev
+git checkout -b dev/ma-feature
+
+# Cyber
+git checkout -b cyber/ma-feature
+
+# Data
+git checkout -b data/ma-feature
+```
+
+### Règles
+
+- On ne pousse **jamais directement sur `main`**
+- Chaque feature = une branche + une PR
+- Nommer la branche en **anglais**, en **kebab-case**
 
 ---
 
