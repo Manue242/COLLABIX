@@ -23,3 +23,23 @@ class AnnotationResponse(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# --- Export / Import ---
+
+class AnnotationExportItem(BaseModel):
+    id: UUID
+    type: str
+    content: str
+    timestamp: float
+    color: str
+    user_id: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class ExportPayload(BaseModel):
+    version: str = "1.0"
+    video_id: str
+    exported_at: datetime
+    annotations: list[AnnotationExportItem]
