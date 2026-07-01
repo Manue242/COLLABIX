@@ -1,0 +1,17 @@
+# Environnement virtuel
+venv/
+.venv/
+
+# Cache Python
+__pycache__/
+*.py[cod]
+
+# Base vectorielle ChromaDB (générée à l'exécution)
+chroma_db/
+
+# Fichiers audio temporaires
+*.wav
+
+# Divers
+.DS_Store
+Thumbs.db
