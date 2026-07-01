@@ -11,14 +11,20 @@
 - [x] `GET /auth/me` ✅
 - [x] `POST /auth/password` ✅
 
+### CI / GitHub Actions
+
+- [x] Workflow `.github/workflows/backend-ci.yml` ✅ — se déclenche sur push/PR vers `develop` (dossier `backend/`)
+
 ### Tests
 
 - [x] `tests/test_health.py` ✅
 - [x] `tests/test_auth.py` ✅ (register, login, me, change password)
-- [x] `tests/test_annotations.py` ✅ (CRUD, export, import, roundtrip)
-- [ ] `tests/test_videos.py` — upload + liste vidéos
+- [x] `tests/test_annotations.py` ✅ (CRUD, export, import, roundtrip, username)
+- [x] `tests/test_videos.py` ✅ (upload, liste, format invalide)
 
 ### Annotations
+
+- [x] `username` inclus dans `GET /api/annotations?video_id=` ✅ — jointure users → retourne le nom d'auteur dans l'historique
 
 - [ ] `PATCH /api/annotations/{id}` — modifier une annotation (contenu, couleur)
   - Fichiers : `routers/annotations.py`, `services/annotation.py`, `schemas/annotation.py`

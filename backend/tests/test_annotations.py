@@ -109,3 +109,24 @@ async def test_export_import_roundtrip(client):
     r = await client.post("/api/annotations/import", json=payload)
     assert r.status_code == 201
     assert len(r.json()) == 2
+
+
+async def test_annotation_includes_username(client):
+    user = make_user()
+    await client.post("/auth/register", json=user)
+    me = await client.post("/auth/login", json={"email": user["email"], "password": user["password"]})
+    token = me.json()["access_token"]
+
+    profile = await client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    user_id = profile.json()["id"]
+
+    video_id = str(uuid.uuid4())
+    annotation = make_annotation(video_id)
+    annotation["user_id"] = user_id
+    await client.post("/api/annotations", json=annotation)
+
+    r = await client.get(f"/api/annotations?video_id={video_id}")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data) == 1
+    assert data[0]["username"] == user["username"]

@@ -14,7 +14,7 @@ async def create(data: AnnotationCreate, db: AsyncSession = Depends(get_db)):
 
 @router.get("/", response_model=list[AnnotationResponse])
 async def list_by_video(video_id: str, db: AsyncSession = Depends(get_db)):
-    return await annotation_service.get_by_video(db, video_id)
+    return await annotation_service.list_with_username(db, video_id)
 
 
 @router.delete("/{annotation_id}", status_code=204)

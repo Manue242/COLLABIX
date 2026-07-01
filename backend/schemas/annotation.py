@@ -20,6 +20,7 @@ class AnnotationResponse(BaseModel):
     timestamp: float
     color: str
     user_id: str | None
+    username: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

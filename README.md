@@ -111,7 +111,25 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 
 > Les routes marquées ✅ nécessitent le header `Authorization: Bearer <token>`
 
-### Format d'export JSON
+### Format réponse annotation (`GET /api/annotations?video_id=`)
+
+```json
+[
+  {
+    "id": "uuid",
+    "video_id": "mon-film",
+    "type": "comment",
+    "content": "Ce plan dure trop longtemps",
+    "timestamp": 42.5,
+    "color": "#ff0000",
+    "user_id": "uuid-user",
+    "username": "alice",
+    "created_at": "2026-07-01T10:00:00Z"
+  }
+]
+```
+
+### Format d'export JSON (`GET /api/annotations/export?video_id=`)
 
 ```json
 {
@@ -125,7 +143,7 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
       "content": "Ce plan dure trop longtemps",
       "timestamp": 42.5,
       "color": "#ff0000",
-      "user_id": "user_a"
+      "user_id": "uuid-user"
     }
   ]
 }
