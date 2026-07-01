@@ -15,13 +15,14 @@
 
 - [x] Workflow `.github/workflows/backend-ci.yml` ✅ — déclenché sur push/PR vers `develop` (dossier `backend/`)
 
-### Tests — 47 passent
+### Tests — 56 passent
 
 - [x] `tests/test_health.py` ✅ (1 test)
 - [x] `tests/test_auth.py` ✅ (10 tests — register, login, me, change password)
 - [x] `tests/test_annotations.py` ✅ (16 tests — CRUD, export, import, roundtrip, username, PATCH)
 - [x] `tests/test_videos.py` ✅ (13 tests — upload, formats invalides, taille, liste, DELETE)
 - [x] `tests/test_sessions.py` ✅ (7 tests — room vide, users injectés, tri)
+- [x] `tests/test_hls.py` ✅ (9 tests — auth, clé manquante, bytes, rate limit, isolation users)
 
 ### Annotations
 
@@ -49,6 +50,13 @@
 
 - [x] `GET /api/sessions/{video_id}/users` ✅ — liste triée des users connectés sur une vidéo
 
+### HLS — Intégration cyber (Olivier + Nina)
+
+- [x] Scripts PowerShell `generate-key.ps1` + `generate-hls.ps1` ✅ (Olivier)
+- [x] Dossiers `media/hls/`, `media/secrets/`, `media/source/` gitignorés ✅
+- [x] `GET /hls/{fichier}` ✅ — segments `.ts` et playlist `.m3u8` servis via StaticFiles
+- [x] `GET /api/video/key` ✅ (Nina) — clé AES-128 protégée par JWT + rate limit 10 req/min
+
 ---
 
 ## Structure backend actuelle
@@ -64,7 +72,8 @@ backend/
 │   ├── annotations.py       # CRUD + export/import + PATCH
 │   ├── videos.py            # upload, liste, DELETE, 500MB validation
 │   ├── ws.py                # WebSocket + typage Pydantic + room_users
-│   └── sessions.py          # GET /api/sessions/{video_id}/users
+│   ├── sessions.py          # GET /api/sessions/{video_id}/users
+│   └── hls.py               # GET /api/video/key (JWT + rate limit)
 ├── models/
 │   ├── user.py
 │   └── annotation.py
@@ -75,13 +84,21 @@ backend/
 ├── services/
 │   ├── auth.py
 │   └── annotation.py        # CRUD + list_with_username + update
+├── scripts/
+│   ├── generate-key.ps1     # génère la clé AES-128 (16 octets)
+│   └── generate-hls.ps1     # découpe + chiffre la vidéo en HLS via FFmpeg
+├── media/                   # gitignorés — générés localement
+│   ├── source/              # vidéo MP4 source
+│   ├── hls/                 # playlist.m3u8 + segments .ts
+│   └── secrets/             # video.key + key_info.txt
 └── tests/
     ├── conftest.py
     ├── test_health.py
     ├── test_auth.py
     ├── test_annotations.py
     ├── test_videos.py
-    └── test_sessions.py
+    ├── test_sessions.py
+    └── test_hls.py
 ```
 
 ---
@@ -107,6 +124,8 @@ backend/
 | `POST` | `/api/annotations/import` | — | Import JSON |
 | `GET` | `/api/sessions/{video_id}/users` | — | Users connectés sur une vidéo |
 | `WS` | `/ws/{video_id}?user_id=` | — | Session collaborative |
+| `GET` | `/hls/{fichier}` | — | Segments HLS chiffrés + playlist |
+| `GET` | `/api/video/key` | ✅ | Clé AES-128 (rate limit 10/min) |
 
 ---
 

@@ -122,6 +122,13 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 | `WS` | `/ws/{video_id}?user_id=` | — | Session collaborative temps réel |
 | `GET` | `/api/sessions/{video_id}/users` | — | Users connectés sur une vidéo |
 
+**HLS — Vidéo chiffrée AES-128**
+
+| Méthode | Route | Auth requise | Description |
+|---------|-------|:---:|-------------|
+| `GET` | `/hls/{fichier}` | — | Segments `.ts` + playlist `.m3u8` |
+| `GET` | `/api/video/key` | ✅ | Clé AES-128 (rate limit 10 req/min) |
+
 > Les routes marquées ✅ nécessitent le header `Authorization: Bearer <token>`
 
 ### Format messages WebSocket
@@ -174,7 +181,7 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 
 ### Tests
 
-**47 tests** — lancer via Docker (recommandé) :
+**56 tests** — lancer via Docker (recommandé) :
 
 ```bash
 docker-compose --profile test run --rm tests
@@ -187,8 +194,38 @@ docker-compose --profile test run --rm tests
 | `test_annotations.py` | CRUD, export, import, username, PATCH |
 | `test_videos.py` | Upload, formats invalides, taille max, liste, DELETE |
 | `test_sessions.py` | Room vide, users injectés, tri alphabétique |
+| `test_hls.py` | Auth, clé manquante, bytes exacts, rate limit, isolation users |
 
 La DB `collabix_test` est créée automatiquement au premier `docker-compose up --build`. Les tables sont recréées et nettoyées à chaque run.
+
+### HLS — Vidéo chiffrée AES-128
+
+Prérequis : **FFmpeg** installé et accessible dans le PATH.
+
+**1. Générer la clé AES-128**
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\backend\scripts\generate-key.ps1
+```
+
+**2. Placer la vidéo source**
+
+```
+backend/media/source/demo-video.mp4
+```
+
+**3. Générer le flux HLS chiffré**
+
+```powershell
+.\backend\scripts\generate-hls.ps1
+```
+
+Les fichiers générés (`playlist.m3u8`, segments `.ts`, `video.key`) sont gitignorés et restent locaux.
+
+Le player accède à `/hls/playlist.m3u8` et récupère la clé via `GET /api/video/key` (JWT requis).
+
+> Doc complète : [`docs/cyber1-hls-encryption.md`](docs/cyber1-hls-encryption.md)
 
 ### Dev local (sans Docker)
 
