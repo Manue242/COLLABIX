@@ -4,6 +4,13 @@
 
 ## Backend — Tâches restantes
 
+### Auth
+
+- [x] `POST /auth/register` ✅
+- [x] `POST /auth/login` ✅
+- [x] `GET /auth/me` ✅
+- [x] `POST /auth/password` ✅
+
 ### Annotations
 
 - [ ] `PATCH /api/annotations/{id}` — modifier une annotation (contenu, couleur)

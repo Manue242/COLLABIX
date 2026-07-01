@@ -85,18 +85,31 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 
 ### Endpoints
 
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| `GET` | `/api/health` | Santé de l'API |
-| `POST` | `/api/videos/upload` | Upload une vidéo (mp4, webm, ogg) |
-| `GET` | `/api/videos/` | Liste des vidéos disponibles |
-| `GET` | `/videos/{filename}` | Stream d'une vidéo |
-| `POST` | `/api/annotations` | Créer une annotation |
-| `GET` | `/api/annotations?video_id=` | Lister les annotations d'une vidéo |
-| `DELETE` | `/api/annotations/{id}` | Supprimer une annotation |
-| `GET` | `/api/annotations/export?video_id=` | Exporter les annotations en JSON propre |
-| `POST` | `/api/annotations/import` | Réimporter un fichier JSON d'annotations |
-| `WS` | `/ws/{video_id}` | Session collaborative temps réel |
+**Auth**
+
+| Méthode | Route | Auth requise | Description |
+|---------|-------|:---:|-------------|
+| `POST` | `/auth/register` | — | Créer un compte |
+| `POST` | `/auth/login` | — | Connexion → retourne JWT |
+| `GET` | `/auth/me` | ✅ | Profil de l'utilisateur connecté |
+| `POST` | `/auth/password` | ✅ | Changer le mot de passe |
+
+**Vidéos & Annotations**
+
+| Méthode | Route | Auth requise | Description |
+|---------|-------|:---:|-------------|
+| `GET` | `/api/health` | — | Santé de l'API |
+| `POST` | `/api/videos/upload` | — | Upload une vidéo (mp4, webm, ogg) |
+| `GET` | `/api/videos/` | — | Liste des vidéos disponibles |
+| `GET` | `/videos/{filename}` | — | Stream d'une vidéo |
+| `POST` | `/api/annotations` | — | Créer une annotation |
+| `GET` | `/api/annotations?video_id=` | — | Lister les annotations d'une vidéo |
+| `DELETE` | `/api/annotations/{id}` | — | Supprimer une annotation |
+| `GET` | `/api/annotations/export?video_id=` | — | Exporter les annotations en JSON propre |
+| `POST` | `/api/annotations/import` | — | Réimporter un fichier JSON d'annotations |
+| `WS` | `/ws/{video_id}` | — | Session collaborative temps réel |
+
+> Les routes marquées ✅ nécessitent le header `Authorization: Bearer <token>`
 
 ### Format d'export JSON
 

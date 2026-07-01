@@ -6,7 +6,9 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
 from database import engine, Base
-from routers import health, annotations, ws, videos
+import models.user  # noqa: F401 — requis pour create_all
+import models.annotation  # noqa: F401 — requis pour create_all
+from routers import health, annotations, ws, videos, auth
 
 load_dotenv()
 
@@ -33,6 +35,7 @@ app.add_middleware(
 
 app.mount("/videos", StaticFiles(directory=UPLOAD_DIR), name="videos")
 
+app.include_router(auth.router)
 app.include_router(health.router)
 app.include_router(annotations.router)
 app.include_router(videos.router)
