@@ -13,11 +13,26 @@
 
 ### Docker / Infrastructure
 
-- [x] `docker-compose up --build` ✅ — lance db + backend + frontend en un seul commande
+- [x] `docker-compose up --build` ✅ — lance db + backend + frontend + IA en un seul commande
 - [x] Healthcheck backend ✅ — frontend attend que l'API soit prête avant de démarrer
 - [x] Proxy Vite configuré pour Docker ✅ — `VITE_BACKEND_URL=http://backend:8000` (fallback `localhost:8000` en local)
-- [x] Routes proxiées ✅ — `/api`, `/auth`, `/videos`, `/hls`, `/ws`
+- [x] Routes proxiées backend ✅ — `/api`, `/auth`, `/videos`, `/hls`, `/ws`
+- [x] Routes proxiées IA ✅ — `/process`, `/search` → `ai-api:8080` via `VITE_AI_URL`
 - [x] CORS ouvert ✅ — `allow_origins=["*"]` (sécurité gérée par l'équipe cyber)
+- [x] Services IA intégrés ✅ — `ollama`, `ollama-init`, `ai-api` dans le docker-compose racine
+
+### AI — Pipeline d'indexation sémantique (pôle 3)
+
+- [x] Extraction audio mono 16 kHz (FFmpeg) ✅ — `pipeline/audio.py`
+- [x] Transcription + timestamps + détection de langue (Whisper) ✅ — `pipeline/transcribe.py`
+- [x] Traduction multilingue segment par segment (Ollama/llama3.2) ✅ — `pipeline/translate.py`
+- [x] Résumé court + détaillé + bullets (Ollama) ✅ — `pipeline/summarize.py`
+- [x] Chapitres thématiques titrés (Ollama) ✅ — `pipeline/chapters.py`
+- [x] Mots-clés + topics (KeyBERT) ✅ — `pipeline/keywords.py`
+- [x] JSON commun assemblé ✅ — `main.py` (`POST /process`)
+- [x] Indexation vectorielle (ChromaDB + sentence-transformers) ✅ — `pipeline/vectorstore.py`
+- [x] Recherche sémantique en langage naturel ✅ — `POST /search`
+- [x] Dockerfile + docker-compose standalone ✅ — déploiement staging autonome
 
 ### CI / GitHub Actions
 

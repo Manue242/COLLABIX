@@ -263,23 +263,64 @@ En local il pointe sur `http://localhost:8000` ; dans Docker sur `http://backend
 
 ---
 
-## AI / Data
+## AI / Data — Pipeline d'indexation sémantique
 
-> **Section à compléter par le dev IA**
+Pipeline complet de traitement vidéo : transcription, traduction, résumé, chapitrage, mots-clés et **recherche vectorielle sémantique**. 100% local, aucune clé API requise.
+
+Via Docker (recommandé) : inclus dans `docker-compose up --build`, accessible sur `http://localhost:8080`.
+
+> Premier démarrage long : `ollama-init` télécharge `llama3.2` (~2 GB) et `ai-api` télécharge Whisper + embeddings (~500 MB) au premier `/process`. Modèles mis en cache dans des volumes Docker.
+
+### Fonctionnalités
+
+| # | Étape | Techno |
+|---|-------|--------|
+| 1 | Extraction audio mono 16 kHz | FFmpeg |
+| 2 | Transcription + timestamps + détection de langue | Whisper |
+| 3 | Traduction multilingue segment par segment | Ollama (llama3.2) |
+| 4 | Résumé court + détaillé + bullets | Ollama |
+| 5 | Chapitres thématiques titrés | Ollama |
+| 6 | Mots-clés + topics | KeyBERT |
+| 7 | JSON commun assemblé | FastAPI |
+| 8 | Indexation vectorielle + recherche sémantique | ChromaDB + sentence-transformers |
+
+### Endpoints
+
+| Méthode | Route | Description |
+|---------|-------|-------------|
+| `GET` | `/health` | Santé de l'API IA |
+| `POST` | `/process` | Pipeline complet → JSON (transcript, résumé, chapitres…) |
+| `POST` | `/search` | Recherche sémantique sur toutes les vidéos traitées |
+
+Le front appelle `/process` et `/search` directement — le proxy Vite redirige vers `ai-api:8080`.
+
+### Paramètres de `/process`
+
+| Paramètre | Défaut | Description |
+|-----------|--------|-------------|
+| `target_lang` | `en` | Langue cible de traduction |
+| `model_size` | `base` | Modèle Whisper (`tiny` / `base` / `small`) |
+| `skip_translation` | `false` | Désactive la traduction |
+| `skip_summary` | `false` | Désactive le résumé |
+| `skip_chapters` | `false` | Désactive le chapitrage |
+
+> Pour la démo : `?model_size=tiny&skip_translation=true` accélère significativement le traitement.
+
+### Dev local (sans Docker)
 
 ```bash
-cd ai-data
+cd ai-data/indexation-semantique
 python -m venv .venv
-.venv\Scripts\activate
+source .venv/bin/activate   # Mac/Linux
+# .venv\Scripts\activate    # Windows
+pip install torch --index-url https://download.pytorch.org/whl/cpu
 pip install -r requirements.txt
+uvicorn main:app --reload --port 8080
 ```
 
-<!--
-  Ajouter ici :
-  - Les notebooks disponibles et leur rôle
-  - Les modèles utilisés
-  - Les sources de données
--->
+Prérequis : **FFmpeg** + **Ollama** installé et lancé (`ollama pull llama3.2`).
+
+> Doc complète : [`ai-data/indexation-semantique/README.md`](ai-data/indexation-semantique/README.md)
 
 ---
 
