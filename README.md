@@ -1,2 +1,128 @@
 # COLLABIX
-Application de streaming collaborative, sécurisée et enrichie avec des fonctionnalités IA. 
+
+Application de streaming collaborative, sécurisée et enrichie avec des fonctionnalités IA.
+
+---
+
+## Structure du projet
+
+```
+website/
+├── backend/        # API FastAPI (Python)
+├── frontend/       # App React + Vite
+├── ai-data/        # Scripts & modèles IA
+├── docs/           # Architecture & choix techniques
+├── docker-compose.yml
+└── .env.example
+```
+
+---
+
+## Prérequis
+
+- [Docker](https://www.docker.com/) + Docker Compose
+- **Backend** : Python 3.12+
+- **Frontend** : Node.js 22+
+- **AI/Data** : Python 3.12+, Jupyter
+
+---
+
+## Démarrage rapide (Docker)
+
+Copier le fichier d'environnement :
+
+```bash
+cp .env.example .env
+```
+
+Lancer tous les services :
+
+```bash
+docker-compose up --build
+```
+
+| Service  | URL                        |
+|----------|----------------------------|
+| Frontend | http://localhost:5173      |
+| Backend  | http://localhost:8000      |
+| API Docs | http://localhost:8000/docs |
+
+---
+
+## Backend — FastAPI
+
+### Setup local
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+# source .venv/bin/activate   # Mac/Linux
+pip install -r requirements.txt
+```
+
+### Lancer le serveur
+
+```bash
+uvicorn main:app --reload
+```
+
+API disponible sur `http://localhost:8000`  
+Documentation Swagger sur `http://localhost:8000/docs`
+
+### Variables d'environnement
+
+Copier `.env.example` en `.env` à la racine et remplir les valeurs.
+
+### Stack
+
+- **FastAPI** — framework API
+- **Uvicorn** — serveur ASGI
+- **Pydantic** — validation des données
+
+---
+
+## Frontend — React + Vite
+
+> **Section à compléter par le dev frontend**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+<!-- 
+  Ajouter ici :
+  - Les dépendances supplémentaires installées
+  - La structure des composants
+  - Les variables d'env VITE_* utilisées
+-->
+
+---
+
+## AI / Data
+
+> **Section à compléter par le dev IA**
+
+```bash
+cd ai-data
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+<!--
+  Ajouter ici :
+  - Les notebooks disponibles et leur rôle
+  - Les modèles utilisés
+  - Les sources de données
+-->
+
+---
+
+## Docs
+
+- [`docs/architecture.md`](docs/architecture.md) — Architecture globale
+- [`docs/choix-techniques.md`](docs/choix-techniques.md) — Choix techniques justifiés
+- [`docs/demo.md`](docs/demo.md) — Scénario de démo
