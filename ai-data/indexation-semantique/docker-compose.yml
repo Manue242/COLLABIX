@@ -1,0 +1,54 @@
+# Déploiement staging : API FastAPI + Ollama
+# Lancement : docker compose up -d --build
+services:
+  # Serveur Ollama (LLM local)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    volumes:
+      - ollama_models:/root/.ollama   # persiste les modèles téléchargés
+    ports:
+      - "11434:11434"
+    restart: unless-stopped
+    # Pour utiliser un GPU NVIDIA, décommenter :
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  # Tâche unique : télécharge le modèle llama3.2 dans Ollama, puis s'arrête
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=ollama:11434
+    entrypoint: >
+      sh -c "until ollama list >/dev/null 2>&1; do echo 'attente du serveur ollama...'; sleep 2; done; ollama pull llama3.2"
+    restart: "no"
+
+  # API FastAPI (pipeline d'indexation)
+  api:
+    build: .
+    container_name: indexation-api
+    depends_on:
+      - ollama
+    environment:
+      # L'API joint Ollama via le réseau Docker (nom de service "ollama")
+      - OLLAMA_HOST=http://ollama:11434
+    ports:
+      - "8080:8080"
+    volumes:
+      - hf_cache:/root/.cache/huggingface   # cache modèles KeyBERT + embeddings
+      - whisper_cache:/root/.cache/whisper  # cache modèle Whisper
+      - chroma_data:/app/chroma_db          # base vectorielle persistante
+    restart: unless-stopped
+
+volumes:
+  ollama_models:
+  hf_cache:
+  whisper_cache:
+  chroma_data:

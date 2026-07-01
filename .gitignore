@@ -1,4 +1,8 @@
 # =========================
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+
 # Python
 # =========================
 __pycache__/

@@ -85,13 +85,63 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 
 ### Endpoints
 
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| `GET` | `/api/health` | Santé de l'API |
-| `POST` | `/api/annotations` | Créer une annotation |
-| `GET` | `/api/annotations?video_id=` | Lister les annotations d'une vidéo |
-| `DELETE` | `/api/annotations/{id}` | Supprimer une annotation |
-| `WS` | `/ws/{video_id}` | Session collaborative temps réel |
+**Auth**
+
+| Méthode | Route | Auth requise | Description |
+|---------|-------|:---:|-------------|
+| `POST` | `/auth/register` | — | Créer un compte |
+| `POST` | `/auth/login` | — | Connexion → retourne JWT |
+| `GET` | `/auth/me` | ✅ | Profil de l'utilisateur connecté |
+| `POST` | `/auth/password` | ✅ | Changer le mot de passe |
+
+**Vidéos & Annotations**
+
+| Méthode | Route | Auth requise | Description |
+|---------|-------|:---:|-------------|
+| `GET` | `/api/health` | — | Santé de l'API |
+| `POST` | `/api/videos/upload` | — | Upload une vidéo (mp4, webm, ogg) |
+| `GET` | `/api/videos/` | — | Liste des vidéos disponibles |
+| `GET` | `/videos/{filename}` | — | Stream d'une vidéo |
+| `POST` | `/api/annotations` | — | Créer une annotation |
+| `GET` | `/api/annotations?video_id=` | — | Lister les annotations d'une vidéo |
+| `DELETE` | `/api/annotations/{id}` | — | Supprimer une annotation |
+| `GET` | `/api/annotations/export?video_id=` | — | Exporter les annotations en JSON propre |
+| `POST` | `/api/annotations/import` | — | Réimporter un fichier JSON d'annotations |
+| `WS` | `/ws/{video_id}` | — | Session collaborative temps réel |
+
+> Les routes marquées ✅ nécessitent le header `Authorization: Bearer <token>`
+
+### Format d'export JSON
+
+```json
+{
+  "version": "1.0",
+  "video_id": "mon-film",
+  "exported_at": "2026-07-01T10:00:00Z",
+  "annotations": [
+    {
+      "id": "uuid",
+      "type": "comment",
+      "content": "Ce plan dure trop longtemps",
+      "timestamp": 42.5,
+      "color": "#ff0000",
+      "user_id": "user_a"
+    }
+  ]
+}
+```
+
+### Tests
+
+Lancer les tests via Docker (recommandé) :
+
+```bash
+docker-compose --profile test run --rm tests
+```
+
+La DB `collabix_test` est créée automatiquement au premier `docker-compose up --build`.
+
+Les tables de test sont créées et supprimées automatiquement à chaque run.
 
 ### Dev local (sans Docker)
 
@@ -113,11 +163,13 @@ npm install
 npm run dev
 ```
 
-<!-- 
+<!--
   Ajouter ici :
-  - Les dépendances supplémentaires installées
-  - La structure des composants
-  - Les variables d'env VITE_* utilisées
+  - Dépendances installées (player vidéo, canvas, state management...)
+  - Structure des composants
+  - Props du composant <VideoReviewer /> (videoSrc, userId, sessionId)
+  - Variables d'env VITE_* utilisées
+  - Librairie UI choisie
 -->
 
 ---
@@ -151,7 +203,6 @@ Chaque pôle travaille sur son propre préfixe :
 | Pôle | Format | Exemple |
 |------|--------|---------|
 | Dev (backend / frontend) | `dev/<feature>` | `dev/annotations-api` |
-| Cyber | `cyber/<feature>` | `cyber/auth-jwt` |
 | Data / IA | `data/<feature>` | `data/video-analysis` |
 
 ### Créer une branche
@@ -159,9 +210,6 @@ Chaque pôle travaille sur son propre préfixe :
 ```bash
 # Dev
 git checkout -b dev/ma-feature
-
-# Cyber
-git checkout -b cyber/ma-feature
 
 # Data
 git checkout -b data/ma-feature
