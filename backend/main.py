@@ -8,16 +8,18 @@ from dotenv import load_dotenv
 from database import engine, Base
 import models.user  # noqa: F401 — requis pour create_all
 import models.annotation  # noqa: F401 — requis pour create_all
-from routers import health, annotations, ws, videos, auth, sessions
+from routers import health, annotations, ws, videos, auth, sessions, hls
 
 load_dotenv()
 
 UPLOAD_DIR = Path("uploads")
+HLS_DIR = Path("media/hls")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     UPLOAD_DIR.mkdir(exist_ok=True)
+    HLS_DIR.mkdir(parents=True, exist_ok=True)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -34,6 +36,7 @@ app.add_middleware(
 )
 
 app.mount("/videos", StaticFiles(directory=UPLOAD_DIR), name="videos")
+app.mount("/hls", StaticFiles(directory=HLS_DIR), name="hls")
 
 app.include_router(auth.router)
 app.include_router(health.router)
@@ -41,3 +44,4 @@ app.include_router(annotations.router)
 app.include_router(videos.router)
 app.include_router(ws.router)
 app.include_router(sessions.router)
+app.include_router(hls.router)

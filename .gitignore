@@ -2,6 +2,14 @@
 backend/uploads/*
 !backend/uploads/.gitkeep
 
+# HLS — médias générés localement (ne jamais committer)
+backend/media/source/*
+!backend/media/source/.gitkeep
+backend/media/hls/*
+!backend/media/hls/.gitkeep
+backend/media/secrets/*
+!backend/media/secrets/.gitkeep
+
 # Python
 __pycache__/
 *.py[cod]
