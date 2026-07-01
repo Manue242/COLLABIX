@@ -11,6 +11,13 @@
 - [x] `GET /auth/me` ✅
 - [x] `POST /auth/password` ✅
 
+### Tests
+
+- [x] `tests/test_health.py` ✅
+- [x] `tests/test_auth.py` ✅ (register, login, me, change password)
+- [x] `tests/test_annotations.py` ✅ (CRUD, export, import, roundtrip)
+- [ ] `tests/test_videos.py` — upload + liste vidéos
+
 ### Annotations
 
 - [ ] `PATCH /api/annotations/{id}` — modifier une annotation (contenu, couleur)

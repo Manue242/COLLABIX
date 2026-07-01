@@ -131,6 +131,22 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 }
 ```
 
+### Tests
+
+Installer les dépendances de test :
+
+```bash
+pip install -r requirements-dev.txt
+```
+
+Lancer les tests (PostgreSQL doit tourner avec une DB `collabix_test`) :
+
+```bash
+pytest
+```
+
+Les tests utilisent une base dédiée `collabix_test` — elle est créée et supprimée automatiquement à chaque run.
+
 ### Dev local (sans Docker)
 
 Mettre à jour le `.env` avec `@localhost` à la place de `@db` :
