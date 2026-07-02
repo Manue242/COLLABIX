@@ -8,6 +8,7 @@ class CursorMessage(BaseModel):
     x: float
     y: float
     user_id: str
+    username: str | None = None
 
 
 class AnnotationAddedMessage(BaseModel):
@@ -20,7 +21,13 @@ class AnnotationDeletedMessage(BaseModel):
     id: str
 
 
+class ReactionMessage(BaseModel):
+    type: Literal["reaction"]
+    emoji: str
+    user_id: str
+
+
 WsMessage = Annotated[
-    Union[CursorMessage, AnnotationAddedMessage, AnnotationDeletedMessage],
+    Union[CursorMessage, AnnotationAddedMessage, AnnotationDeletedMessage, ReactionMessage],
     Field(discriminator="type"),
 ]

@@ -10,13 +10,16 @@ export async function fetchUploadedVideos() {
     const files = await res.json()
     return files.map(f => ({
       id: f.filename,
-      title: f.filename.replace(/\.[^.]+$/, ''),
+      title: f.title || f.filename.replace(/\.[^.]+$/, ''),
+      description: f.description || '',
+      realCategory: f.category || '',
       category: UPLOADED_CATEGORY,
       duration: '',
       addedAt: 'Ajoutée récemment',
       progress: 0,
       gradient: 'linear-gradient(135deg,#1e1b4b,#4338ca)',
       src: f.url,
+      editable: true,
     }))
   } catch {
     return []

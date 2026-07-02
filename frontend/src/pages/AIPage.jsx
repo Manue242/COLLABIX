@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import Header from '../components/Header.jsx'
+import { cacheChapters } from '../utils/aiCache.js'
 
 export default function AIPage() {
   const fileInputRef = useRef(null)
@@ -42,7 +43,9 @@ export default function AIPage() {
       formData.append('file', videoFile)
       const res = await fetch(`/process?${params}`, { method: 'POST', body: formData })
       if (!res.ok) throw new Error(`Erreur ${res.status}`)
-      setResult(await res.json())
+      const data = await res.json()
+      setResult(data)
+      if (data.chapters) cacheChapters(videoFile.name, data.chapters)
     } catch (err) {
       setProcessError(err.message || 'Erreur lors du traitement')
     } finally {
@@ -76,25 +79,21 @@ export default function AIPage() {
   return (
     <div className="page">
       <Header />
-      <main style={{ maxWidth: 860, margin: '0 auto', padding: '2rem 1.5rem' }}>
+      <main className="ai-main">
 
-        <div style={{ marginBottom: '1.5rem' }}>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 4 }}>Indexation sémantique IA</h1>
-          <p style={{ color: 'var(--text-muted, #888)', fontSize: '0.9rem' }}>
+        <div className="ai-header">
+          <h1 className="ai-title">Indexation sémantique IA</h1>
+          <p className="ai-subtitle">
             Transcription, résumé, chapitres, mots-clés et recherche vectorielle — 100% local.
           </p>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem', borderBottom: '1px solid #2a2a3a' }}>
+        <div className="ai-tabs">
           {[['process', 'Traiter une vidéo'], ['search', 'Recherche sémantique']].map(([key, label]) => (
-            <button key={key} onClick={() => setTab(key)} style={{
-              padding: '0.5rem 1.2rem', border: 'none', background: 'none', cursor: 'pointer',
-              fontWeight: tab === key ? 700 : 400,
-              color: tab === key ? '#7C3AED' : 'inherit',
-              borderBottom: tab === key ? '2px solid #7C3AED' : '2px solid transparent',
-              marginBottom: -1,
-            }}>{label}</button>
+            <button key={key} className={`ai-tab-btn ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>
+              {label}
+            </button>
           ))}
         </div>
 
@@ -103,62 +102,61 @@ export default function AIPage() {
           <form onSubmit={handleProcess}>
             {/* File picker */}
             <div
+              className={`ai-dropzone ${videoFile ? 'has-file' : ''}`}
               onClick={() => fileInputRef.current?.click()}
-              style={{
-                border: '2px dashed #3a3a5a', borderRadius: 12, padding: '2rem',
-                textAlign: 'center', cursor: 'pointer', marginBottom: '1.5rem',
-                background: videoFile ? '#1a1a2e' : 'transparent',
-              }}
             >
-              {videoFile
-                ? <p style={{ margin: 0 }}>📹 <strong>{videoFile.name}</strong> ({(videoFile.size / 1024 / 1024).toFixed(1)} Mo) — <span style={{ color: '#7C3AED', textDecoration: 'underline' }}>Changer</span></p>
-                : <><p style={{ margin: '0 0 4px' }}>Glissez ou cliquez pour choisir une vidéo</p><p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>MP4, MOV, WEBM</p></>
-              }
+              {videoFile ? (
+                <p className="ai-dropzone-file">
+                  📹 <strong>{videoFile.name}</strong> ({(videoFile.size / 1024 / 1024).toFixed(1)} Mo) — <span className="ai-dropzone-change">Changer</span>
+                </p>
+              ) : (
+                <>
+                  <p className="ai-dropzone-title">Glissez ou cliquez pour choisir une vidéo</p>
+                  <p className="ai-dropzone-sub">MP4, MOV, WEBM</p>
+                </>
+              )}
               <input ref={fileInputRef} type="file" accept="video/*" style={{ display: 'none' }}
                 onChange={e => setVideoFile(e.target.files[0])} />
             </div>
 
             {/* Options */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.85rem' }}>
+            <div className="ai-options-grid">
+              <label className="ai-option-field">
                 Langue cible
-                <select value={options.target_lang} onChange={e => setOptions(o => ({ ...o, target_lang: e.target.value }))}
-                  style={{ padding: '0.4rem', borderRadius: 6, background: '#1a1a2e', border: '1px solid #3a3a5a', color: 'inherit' }}>
+                <select value={options.target_lang} onChange={e => setOptions(o => ({ ...o, target_lang: e.target.value }))}>
                   <option value="fr">Français</option>
                   <option value="en">Anglais</option>
                   <option value="es">Espagnol</option>
                   <option value="de">Allemand</option>
                 </select>
               </label>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: '0.85rem' }}>
+              <label className="ai-option-field">
                 Modèle Whisper
-                <select value={options.model_size} onChange={e => setOptions(o => ({ ...o, model_size: e.target.value }))}
-                  style={{ padding: '0.4rem', borderRadius: 6, background: '#1a1a2e', border: '1px solid #3a3a5a', color: 'inherit' }}>
+                <select value={options.model_size} onChange={e => setOptions(o => ({ ...o, model_size: e.target.value }))}>
                   <option value="tiny">tiny — rapide</option>
                   <option value="base">base — équilibré</option>
                   <option value="small">small — précis</option>
                 </select>
               </label>
             </div>
-            <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+            <div className="ai-skip-options">
               {[['skip_translation', 'Passer traduction'], ['skip_summary', 'Passer résumé'], ['skip_chapters', 'Passer chapitres']].map(([key, label]) => (
-                <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                <label key={key} className="ai-skip-item">
                   <input type="checkbox" checked={options[key]} onChange={e => setOptions(o => ({ ...o, [key]: e.target.checked }))} />
                   {label}
                 </label>
               ))}
             </div>
 
-            {processError && <p style={{ color: '#ef4444', marginBottom: '1rem' }}>{processError}</p>}
+            {processError && <p className="ai-error">{processError}</p>}
 
-            <button type="submit" disabled={!videoFile || processing}
-              style={{ padding: '0.6rem 2rem', background: '#7C3AED', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600, opacity: (!videoFile || processing) ? 0.5 : 1 }}>
+            <button type="submit" className="ai-submit-btn" disabled={!videoFile || processing}>
               {processing ? 'Traitement en cours… (peut prendre plusieurs minutes)' : 'Lancer le traitement'}
             </button>
 
             {/* Results */}
             {result && (
-              <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="ai-results">
 
                 {/* Info vidéo */}
                 <Section title="Vidéo">
@@ -170,10 +168,10 @@ export default function AIPage() {
                 {/* Résumé */}
                 {result.summary && (
                   <Section title="Résumé">
-                    <p style={{ margin: '0 0 8px', fontStyle: 'italic' }}>{result.summary.short}</p>
-                    <p style={{ margin: '0 0 8px', fontSize: '0.9rem', color: '#ccc' }}>{result.summary.detailed}</p>
-                    <ul style={{ margin: 0, paddingLeft: '1.2rem' }}>
-                      {result.summary.bullets?.map((b, i) => <li key={i} style={{ fontSize: '0.85rem', marginBottom: 4 }}>{b}</li>)}
+                    <p className="ai-summary-short">{result.summary.short}</p>
+                    <p className="ai-summary-detailed">{result.summary.detailed}</p>
+                    <ul className="ai-summary-bullets">
+                      {result.summary.bullets?.map((b, i) => <li key={i}>{b}</li>)}
                     </ul>
                   </Section>
                 )}
@@ -182,9 +180,9 @@ export default function AIPage() {
                 {result.chapters?.length > 0 && (
                   <Section title="Chapitres">
                     {result.chapters.map((c, i) => (
-                      <div key={i} style={{ borderLeft: '3px solid #7C3AED', paddingLeft: 12, marginBottom: 12 }}>
-                        <p style={{ margin: '0 0 2px', fontWeight: 600 }}>{fmt(c.start)} — {c.title}</p>
-                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#aaa' }}>{c.summary}</p>
+                      <div key={i} className="ai-chapter-item">
+                        <p className="ai-chapter-title">{fmt(c.start)} — {c.title}</p>
+                        <p className="ai-chapter-summary">{c.summary}</p>
                       </div>
                     ))}
                   </Section>
@@ -193,10 +191,10 @@ export default function AIPage() {
                 {/* Mots-clés */}
                 {result.keywords?.length > 0 && (
                   <Section title="Mots-clés">
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    <div className="ai-keywords">
                       {result.keywords.map((k, i) => (
-                        <span key={i} style={{ background: '#2a1a4e', color: '#c084fc', padding: '3px 10px', borderRadius: 20, fontSize: '0.8rem' }}>
-                          {k.term} <span style={{ opacity: 0.6 }}>({(k.score * 100).toFixed(0)}%)</span>
+                        <span key={i} className="ai-keyword-chip">
+                          {k.term} <span className="ai-keyword-score">({(k.score * 100).toFixed(0)}%)</span>
                         </span>
                       ))}
                     </div>
@@ -205,10 +203,10 @@ export default function AIPage() {
 
                 {/* Transcription */}
                 <Section title="Transcription">
-                  <div style={{ maxHeight: 200, overflowY: 'auto', fontSize: '0.85rem', lineHeight: 1.6, color: '#ccc' }}>
+                  <div className="ai-transcript">
                     {result.transcript.segments?.map((s, i) => (
-                      <p key={i} style={{ margin: '0 0 4px' }}>
-                        <span style={{ color: '#7C3AED', marginRight: 8, fontSize: '0.8rem' }}>{fmt(s.start)}</span>
+                      <p key={i} className="ai-transcript-line">
+                        <span className="ai-transcript-time">{fmt(s.start)}</span>
                         {s.text}
                       </p>
                     ))}
@@ -223,37 +221,35 @@ export default function AIPage() {
         {/* ── SEARCH TAB ── */}
         {tab === 'search' && (
           <form onSubmit={handleSearch}>
-            <div style={{ display: 'flex', gap: 8, marginBottom: '1.5rem' }}>
+            <div className="ai-search-row">
               <input
                 type="text"
                 placeholder="Ex : chiffrement des données, introduction au sujet…"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                style={{ flex: 1, padding: '0.6rem 1rem', borderRadius: 8, background: '#1a1a2e', border: '1px solid #3a3a5a', color: 'inherit', fontSize: '0.95rem' }}
               />
-              <button type="submit" disabled={!query.trim() || searching}
-                style={{ padding: '0.6rem 1.5rem', background: '#7C3AED', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
+              <button type="submit" disabled={!query.trim() || searching}>
                 {searching ? '…' : 'Rechercher'}
               </button>
             </div>
-            <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '1.5rem' }}>
+            <p className="ai-search-hint">
               Recherche dans toutes les vidéos déjà traitées via l'onglet "Traiter une vidéo".
             </p>
 
-            {searchError && <p style={{ color: '#ef4444' }}>{searchError}</p>}
+            {searchError && <p className="ai-error">{searchError}</p>}
 
             {searchResults && (
               searchResults.results.length === 0
-                ? <p style={{ color: '#888' }}>Aucun résultat — traitez d'abord des vidéos.</p>
-                : <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                ? <p className="ai-empty">Aucun résultat — traitez d'abord des vidéos.</p>
+                : <div className="ai-search-results">
                   {searchResults.results.map((r, i) => (
-                    <div key={i} style={{ background: '#1a1a2e', borderRadius: 10, padding: '1rem', borderLeft: '3px solid #7C3AED' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{r.filename}</span>
-                        <span style={{ fontSize: '0.8rem', color: '#7C3AED' }}>{fmt(r.start)} → {fmt(r.end)}</span>
+                    <div key={i} className="ai-result-card">
+                      <div className="ai-result-head">
+                        <span className="ai-result-filename">{r.filename}</span>
+                        <span className="ai-result-time">{fmt(r.start)} → {fmt(r.end)}</span>
                       </div>
-                      <p style={{ margin: 0, fontSize: '0.9rem', color: '#ccc' }}>{r.text}</p>
-                      <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#666' }}>Score : {(r.score * 100).toFixed(0)}%</p>
+                      <p className="ai-result-text">{r.text}</p>
+                      <p className="ai-result-score">Score : {(r.score * 100).toFixed(0)}%</p>
                     </div>
                   ))}
                 </div>
@@ -267,8 +263,8 @@ export default function AIPage() {
 
 function Section({ title, children }) {
   return (
-    <div style={{ background: '#12121e', borderRadius: 12, padding: '1.2rem' }}>
-      <h3 style={{ margin: '0 0 1rem', fontSize: '0.95rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#7C3AED' }}>{title}</h3>
+    <div className="ai-section">
+      <h3 className="ai-section-title">{title}</h3>
       {children}
     </div>
   )
@@ -276,8 +272,8 @@ function Section({ title, children }) {
 
 function Row({ k, v }) {
   return (
-    <div style={{ display: 'flex', gap: 12, marginBottom: 6, fontSize: '0.9rem' }}>
-      <span style={{ color: '#888', minWidth: 140 }}>{k}</span>
+    <div className="ai-row">
+      <span className="ai-row-key">{k}</span>
       <span>{v}</span>
     </div>
   )

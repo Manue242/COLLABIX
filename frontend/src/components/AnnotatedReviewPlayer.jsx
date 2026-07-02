@@ -24,6 +24,16 @@ function cursorColor(userId) {
   return CURSOR_COLORS[code % CURSOR_COLORS.length]
 }
 
+function initials(name) {
+  return name ? name.slice(0, 2).toUpperCase() : '?'
+}
+
+const ONLINE_POLL_MS = 4000
+const TOAST_TTL_MS = 4500
+const HEATMAP_BUCKETS = 40
+const REACTION_TTL_MS = 2000
+const REACTIONS = ['👍', '❤️', '😂', '😮', '👏']
+
 /**
  * Lecteur de revue augmenté — composant autonome et réutilisable.
  * Ne dépend ni de react-router ni d'un contexte d'auth précis : tout arrive en props.
@@ -34,10 +44,11 @@ function cursorColor(userId) {
  *  - user      ({ id, username } | null) utilisateur courant, pour l'attribution des annotations
  *  - sessionId (string, requis)  identifiant de session/vidéo — sert de clé pour l'API et la room WS
  *  - title, category (string, optionnels) affichés dans l'en-tête
+ *  - chapters  (Array<{start, title}>, optionnel) marqueurs de chapitres IA sur la barre de progression
  *  - onBack    (fn, optionnel)   appelé au clic sur « Retour »
  */
 export default function AnnotatedReviewPlayer({
-  videoSrc, hlsSrc, user = null, sessionId, title = '', category = '', onBack,
+  videoSrc, hlsSrc, user = null, sessionId, title = '', category = '', chapters = [], onBack,
 }) {
   const videoRef   = useRef(null)
   const wrapRef    = useRef(null)
@@ -56,8 +67,14 @@ export default function AnnotatedReviewPlayer({
   const [muted, setMuted] = useState(false)
   const [volume, setVolume] = useState(1)
   const [isFullscreen, setIsFullscreen] = useState(false)
-  const [remoteCursors, setRemoteCursors] = useState({}) // { [user_id]: {x, y, ts} }
+  const [remoteCursors, setRemoteCursors] = useState({}) // { [user_id]: {x, y, ts, username} }
   const [usingHls, setUsingHls] = useState(false)
+  const [onlineUsers, setOnlineUsers] = useState([]) // [{ id, username }] — autres utilisateurs connectés
+  const [toasts, setToasts] = useState([]) // [{ id, text, timestamp }]
+  const [aiQuery, setAiQuery] = useState('')
+  const [aiResults, setAiResults] = useState(null)
+  const [aiSearching, setAiSearching] = useState(false)
+  const [flyingReactions, setFlyingReactions] = useState([]) // [{ id, emoji, x }]
 
   // URL WebSocket proxiée par Vite → backend /ws/{video_id}?user_id=...
   const userId = user?.id || user?.email || 'anonymous'
@@ -67,6 +84,20 @@ export default function AnnotatedReviewPlayer({
     : null
 
   const { isConnected, messages, send } = useWebSocket(WS_URL)
+  const fmt = (t) => `${Math.floor(t/60)}:${Math.floor(t%60).toString().padStart(2,'0')}`
+
+  // Réactions qui traversent l'écran — locale (feedback immédiat) ou reçue d'un autre user
+  const spawnReaction = (emoji) => {
+    const id = crypto.randomUUID()
+    const x = 10 + Math.random() * 80 // position horizontale aléatoire, en %
+    setFlyingReactions(p => [...p, { id, emoji, x }])
+    setTimeout(() => setFlyingReactions(p => p.filter(r => r.id !== id)), REACTION_TTL_MS)
+  }
+
+  const handleSendReaction = (emoji) => {
+    spawnReaction(emoji) // le serveur ne renvoie jamais un message à son émetteur
+    if (WS_URL) send({ type: 'reaction', emoji, user_id: userId })
+  }
 
   // Charger les annotations + commentaires persistés depuis le backend
   useEffect(() => {
@@ -117,11 +148,22 @@ export default function AnnotatedReviewPlayer({
             setAnnotations(p => p.some(x => x.id === a.id) ? p : [...p, shape])
           } catch {}
         }
+        // Toast — le serveur ne renvoie jamais un message à son propre émetteur,
+        // donc tout annotation_added reçu ici vient forcément d'un autre utilisateur.
+        const toastAuthor = a.username || 'Quelqu’un'
+        const toastText = a.type === 'comment'
+          ? `${toastAuthor} a commenté à ${fmt(a.timestamp)}`
+          : `${toastAuthor} a annoté à ${fmt(a.timestamp)}`
+        const toastId = crypto.randomUUID()
+        setToasts(p => [...p, { id: toastId, text: toastText, timestamp: a.timestamp }])
+        setTimeout(() => setToasts(p => p.filter(t => t.id !== toastId)), TOAST_TTL_MS)
       } else if (msg.type === 'annotation_deleted') {
         setAnnotations(p => p.filter(a => a.id !== msg.id))
         setComments(p => p.filter(c => c.id !== msg.id))
       } else if (msg.type === 'cursor' && msg.user_id !== userId) {
-        setRemoteCursors(p => ({ ...p, [msg.user_id]: { x: msg.x, y: msg.y, ts: Date.now() } }))
+        setRemoteCursors(p => ({ ...p, [msg.user_id]: { x: msg.x, y: msg.y, ts: Date.now(), username: msg.username } }))
+      } else if (msg.type === 'reaction') {
+        spawnReaction(msg.emoji)
       }
     })
   }, [messages, userId])
@@ -141,6 +183,27 @@ export default function AnnotatedReviewPlayer({
     return () => clearInterval(t)
   }, [])
 
+  // Qui regarde en ce moment — poll léger de la liste des users connectés à cette session
+  useEffect(() => {
+    if (!sessionId) return
+    let cancelled = false
+    const poll = () => {
+      fetch(`/api/sessions/${sessionId}/users`)
+        .then(r => r.json())
+        .then(data => {
+          if (cancelled) return
+          const others = (data.users || [])
+            .filter(uid => uid !== userId)
+            .map(uid => ({ id: uid, username: data.usernames?.[uid] }))
+          setOnlineUsers(others)
+        })
+        .catch(() => {})
+    }
+    poll()
+    const t = setInterval(poll, ONLINE_POLL_MS)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [sessionId, userId])
+
   const handleVideoAreaMouseMove = (e) => {
     if (!WS_URL) return
     const now = Date.now()
@@ -152,6 +215,7 @@ export default function AnnotatedReviewPlayer({
       x: (e.clientX - rect.left) / rect.width,
       y: (e.clientY - rect.top) / rect.height,
       user_id: userId,
+      username: user?.username,
     })
   }
 
@@ -161,6 +225,18 @@ export default function AnnotatedReviewPlayer({
     const annotationItems = annotations.map(a => ({ kind: 'annotation', ...a }))
     return [...commentItems, ...annotationItems].sort((x, y) => x.timestamp - y.timestamp)
   }, [comments, annotations])
+
+  // Densité d'annotations/commentaires par tranche de la vidéo — heatmap sur la timeline
+  const heatmap = useMemo(() => {
+    if (!duration) return []
+    const buckets = new Array(HEATMAP_BUCKETS).fill(0)
+    timelineItems.forEach(item => {
+      const idx = Math.min(HEATMAP_BUCKETS - 1, Math.max(0, Math.floor((item.timestamp / duration) * HEATMAP_BUCKETS)))
+      buckets[idx]++
+    })
+    const max = Math.max(1, ...buckets)
+    return buckets.map(c => c / max)
+  }, [timelineItems, duration])
 
   // Charge la vidéo — HLS chiffré si dispo (hls.js + xhrSetup pour la clé), sinon MP4 direct
   useEffect(() => {
@@ -368,7 +444,28 @@ export default function AnnotatedReviewPlayer({
     )
   }
 
-  const fmt = (t) => `${Math.floor(t/60)}:${Math.floor(t%60).toString().padStart(2,'0')}`
+  // Recherche sémantique IA scopée à cette vidéo — /search est global, on filtre
+  // côté client sur le filename (index_segments côté ai-api l'inclut dans chaque résultat).
+  const handleAiSearch = async (e) => {
+    e.preventDefault()
+    if (!aiQuery.trim()) return
+    setAiSearching(true)
+    setAiResults(null)
+    try {
+      const res = await fetch('/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: aiQuery, top_k: 10 }),
+      })
+      const data = await res.json()
+      const scoped = (data.results || []).filter(r => r.filename === sessionId)
+      setAiResults(scoped)
+    } catch {
+      setAiResults([])
+    } finally {
+      setAiSearching(false)
+    }
+  }
 
   return (
     <div className="player-page">
@@ -386,7 +483,19 @@ export default function AnnotatedReviewPlayer({
           <span className="player-video-category">{category}</span>
         </div>
         <div className="player-header-right">
-          {usingHls && <span className="player-ws on" title="Flux HLS chiffré AES-128">🔒 HLS</span>}
+          {onlineUsers.length > 0 && (
+            <div className="player-online-stack" title={`${onlineUsers.length} autre(s) connecté(s)`}>
+              {onlineUsers.slice(0, 5).map(u => (
+                <span key={u.id} className="player-online-avatar" style={{ background: cursorColor(u.id) }}>
+                  {initials(u.username || u.id)}
+                </span>
+              ))}
+              {onlineUsers.length > 5 && (
+                <span className="player-online-avatar player-online-more">+{onlineUsers.length - 5}</span>
+              )}
+            </div>
+          )}
+          {usingHls && <span key="hls-badge" className="player-ws on player-hls-badge" title="Flux HLS chiffré AES-128 — clé vérifiée">🔒 HLS ✓</span>}
           <span className={`player-ws ${isConnected ? 'on' : ''}`}>
             {WS_URL ? (isConnected ? '● En direct' : '○ Hors ligne') : '○ Solo'}
           </span>
@@ -477,9 +586,27 @@ export default function AnnotatedReviewPlayer({
                   '--cursor-color': cursorColor(uid),
                 }}>
                   <span className="player-remote-cursor-dot" />
-                  <span className="player-remote-cursor-label">{uid.slice(0, 8)}</span>
+                  <span className="player-remote-cursor-label">{c.username || uid.slice(0, 8)}</span>
                 </div>
               ))}
+
+              {/* Notifications live — annotations/commentaires ajoutés par d'autres utilisateurs */}
+              <div className="player-toast-stack">
+                {toasts.map(t => (
+                  <button key={t.id} className="player-toast" onClick={() => handleSeekTime(t.timestamp)}>
+                    {t.text}
+                  </button>
+                ))}
+              </div>
+
+              {/* Réactions qui traversent l'écran */}
+              <div className="player-reactions-layer">
+                {flyingReactions.map(r => (
+                  <span key={r.id} className="player-flying-reaction" style={{ left: `${r.x}%` }}>
+                    {r.emoji}
+                  </span>
+                ))}
+              </div>
             </div>
 
             {/* Contrôles vidéo */}
@@ -497,9 +624,25 @@ export default function AnnotatedReviewPlayer({
 
               {/* Barre de progression */}
               <div className="player-progress-wrap" onClick={handleSeek}>
+                {/* Heatmap de densité — où sont concentrées les annotations/commentaires */}
+                {heatmap.length > 0 && (
+                  <div className="player-heatmap" title="Densité d'annotations/commentaires">
+                    {heatmap.map((v, i) => (
+                      <span key={i} className="player-heatmap-bar" style={{ opacity: v > 0 ? 0.25 + v * 0.75 : 0 }} />
+                    ))}
+                  </div>
+                )}
                 <div className="player-progress-bg">
                   <div className="player-progress-fill"
                     style={{ width: duration ? `${(currentTime/duration)*100}%` : '0%' }} />
+                  {/* Chapitres générés par l'IA (pipeline /process) */}
+                  {duration > 0 && chapters.map((c, i) => (
+                    <span key={i} className="player-chapter-marker"
+                      style={{ left: `${Math.min(100, (c.start / duration) * 100)}%` }}
+                      title={c.title}
+                      onClick={e => { e.stopPropagation(); handleSeekTime(c.start) }}
+                    />
+                  ))}
                 </div>
               </div>
 
@@ -532,6 +675,15 @@ export default function AnnotatedReviewPlayer({
                 />
               </div>
 
+              {/* Réactions rapides */}
+              <div className="player-reaction-picker">
+                {REACTIONS.map(emoji => (
+                  <button key={emoji} className="player-reaction-btn" onClick={() => handleSendReaction(emoji)}>
+                    {emoji}
+                  </button>
+                ))}
+              </div>
+
               {/* Plein écran */}
               <button className="player-ctrl-btn" onClick={toggleFullscreen} title="Plein écran">
                 {isFullscreen
@@ -545,6 +697,29 @@ export default function AnnotatedReviewPlayer({
 
         {/* ── Sidebar commentaires ── */}
         <div className="player-right">
+          <form className="player-ai-search" onSubmit={handleAiSearch}>
+            <input
+              type="text"
+              placeholder="Rechercher dans cette vidéo (IA)…"
+              value={aiQuery}
+              onChange={e => setAiQuery(e.target.value)}
+            />
+            <button type="submit" disabled={!aiQuery.trim() || aiSearching}>
+              {aiSearching ? '…' : '🔍'}
+            </button>
+          </form>
+          {aiResults !== null && (
+            <div className="player-ai-results">
+              {aiResults.length === 0 ? (
+                <p className="player-ai-empty">Aucun résultat — cette vidéo n'a peut-être pas encore été indexée.</p>
+              ) : aiResults.map((r, i) => (
+                <button key={i} className="player-ai-result" onClick={() => handleSeekTime(r.start)}>
+                  <span className="player-ai-result-time">{fmt(r.start)}</span>
+                  <span className="player-ai-result-text">{r.text}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="player-sidebar-title">Commentaires &amp; annotations</div>
           <CommentThread
             items={timelineItems}

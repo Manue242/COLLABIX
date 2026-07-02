@@ -58,11 +58,25 @@ export default function Header() {
             className={`app-nav-btn ${location.pathname === '/catalogue' ? 'active' : ''}`}
             onClick={() => navigate('/catalogue')}
           >Catalogue</button>
+          <button
+            className={`app-nav-btn ${location.pathname === '/ai' ? 'active' : ''}`}
+            onClick={() => navigate('/ai')}
+          >IA</button>
         </nav>
       </div>
 
       <div className="app-header-right">
-        
+
+        {/* Upload */}
+        <button className="app-upload-btn" onClick={() => navigate('/upload')}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          <span>Uploader</span>
+        </button>
+
         {/* Search */}
         <div
           ref={searchRef}
@@ -101,7 +115,6 @@ export default function Header() {
             <div className="app-dropdown">
               <div className="app-dd-head">
                 <div className="app-dd-name">{user?.username}</div>
-                <span className="app-dd-role">{user?.role === 'admin' ? 'Admin' : 'Utilisateur'}</span>
               </div>
               <div className="app-dd-item">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
