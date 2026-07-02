@@ -101,7 +101,6 @@ export default function Header() {
             <div className="app-dropdown">
               <div className="app-dd-head">
                 <div className="app-dd-name">{user?.username}</div>
-                <span className="app-dd-role">{user?.role === 'admin' ? 'Admin' : 'Utilisateur'}</span>
               </div>
               <div className="app-dd-item">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
