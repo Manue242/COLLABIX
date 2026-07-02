@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react'
 import Header from '../components/Header.jsx'
-import { cacheChapters } from '../utils/aiCache.js'
+import { cacheChapters, setAiStatus } from '../utils/aiCache.js'
 
 export default function AIPage() {
   const fileInputRef = useRef(null)
@@ -46,8 +46,10 @@ export default function AIPage() {
       const data = await res.json()
       setResult(data)
       if (data.chapters) cacheChapters(videoFile.name, data.chapters)
+      setAiStatus(videoFile.name, 'done')
     } catch (err) {
       setProcessError(err.message || 'Erreur lors du traitement')
+      setAiStatus(videoFile.name, 'error')
     } finally {
       setProcessing(false)
     }

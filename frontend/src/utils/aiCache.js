@@ -20,3 +20,24 @@ export function getCachedChapters(filename) {
     return []
   }
 }
+
+// Statut du traitement IA en arrière-plan — /upload navigue immédiatement vers
+// le player sans attendre /process, donc rien ne prouvait visuellement que
+// l'indexation avait réellement lieu. Ce flag rend ça visible dans le player.
+const STATUS_PREFIX = 'collabix:ai-status:'
+
+export function setAiStatus(filename, status) {
+  if (!filename) return
+  try {
+    localStorage.setItem(STATUS_PREFIX + filename, status)
+  } catch {}
+}
+
+export function getAiStatus(filename) {
+  if (!filename) return null
+  try {
+    return localStorage.getItem(STATUS_PREFIX + filename)
+  } catch {
+    return null
+  }
+}

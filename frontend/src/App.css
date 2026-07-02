@@ -746,6 +746,10 @@ a { text-decoration: none; }
 .player-header-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 .player-ws { font-size: 11px; color: #6B7280; }
 .player-ws.on { color: #10B981; }
+.player-ai-status { animation: ai-status-pulse 1.6s ease-in-out infinite; }
+.player-ai-status.error { color: #EF4444 !important; animation: none; }
+.player-ws.on.player-ai-status { animation: none; }
+@keyframes ai-status-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 
 /* Qui regarde en ce moment */
 .player-online-stack { display: flex; align-items: center; }

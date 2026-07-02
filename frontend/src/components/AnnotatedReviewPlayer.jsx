@@ -4,6 +4,7 @@ import AnnotationCanvas from './AnnotationCanvas.jsx'
 import CommentThread from './CommentThread.jsx'
 import useWebSocket from '../hooks/useWebSocket.js'
 import { exportAnnotations, downloadAnnotationsAsFile } from '../utils/exportAnnotations.js'
+import { getAiStatus } from '../utils/aiCache.js'
 import ColorPicker from './ColorPicker.jsx'
 
 const TOOLS = [
@@ -76,6 +77,7 @@ export default function AnnotatedReviewPlayer({
   const [aiResults, setAiResults] = useState(null)
   const [aiSearching, setAiSearching] = useState(false)
   const [flyingReactions, setFlyingReactions] = useState([]) // [{ id, emoji, x }]
+  const [aiStatus, setAiStatusState] = useState(() => getAiStatus(sessionId))
 
   // URL WebSocket proxiée par Vite → backend /ws/{video_id}?user_id=...
   const userId = user?.id || user?.email || 'anonymous'
@@ -189,6 +191,21 @@ export default function AnnotatedReviewPlayer({
     }, 1000)
     return () => clearInterval(t)
   }, [])
+
+  // Statut de l'indexation IA en arrière-plan — /upload navigue immédiatement
+  // vers le player sans attendre /process, donc rien ne prouvait visuellement
+  // que l'indexation avait lieu. On relit le flag localStorage régulièrement
+  // jusqu'à ce qu'il passe à "done"/"error".
+  useEffect(() => {
+    if (!sessionId) return
+    setAiStatusState(getAiStatus(sessionId))
+    const t = setInterval(() => {
+      const s = getAiStatus(sessionId)
+      setAiStatusState(s)
+      if (s === 'done' || s === 'error') clearInterval(t)
+    }, 3000)
+    return () => clearInterval(t)
+  }, [sessionId])
 
   // Qui regarde en ce moment — poll léger de la liste des users connectés à cette session
   useEffect(() => {
@@ -501,6 +518,15 @@ export default function AnnotatedReviewPlayer({
                 <span className="player-online-avatar player-online-more">+{onlineUsers.length - 5}</span>
               )}
             </div>
+          )}
+          {aiStatus === 'processing' && (
+            <span className="player-ws player-ai-status" title="Transcription, résumé, chapitres et recherche en cours de génération">🧠 Indexation IA…</span>
+          )}
+          {aiStatus === 'done' && (
+            <span className="player-ws on player-ai-status" title="Transcription, résumé et recherche sémantique disponibles">🧠 IA prête</span>
+          )}
+          {aiStatus === 'error' && (
+            <span className="player-ws player-ai-status error" title="L'indexation IA a échoué — voir la console du navigateur">🧠 Erreur IA</span>
           )}
           {usingHls && <span key="hls-badge" className="player-ws on player-hls-badge" title="Flux HLS chiffré AES-128 — clé vérifiée">🔒 HLS ✓</span>}
           <span className={`player-ws ${isConnected ? 'on' : ''}`}>

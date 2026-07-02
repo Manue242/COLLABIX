@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header.jsx'
 import { CATEGORIES } from '../data/mockVideos.js'
-import { cacheChapters } from '../utils/aiCache.js'
+import { cacheChapters, setAiStatus } from '../utils/aiCache.js'
 
 export default function UploadVideo() {
   const navigate = useNavigate()
@@ -66,6 +66,7 @@ export default function UploadVideo() {
       // jamais indexée (seul /ai le faisait avant).
       const aiForm = new FormData()
       aiForm.append('file', videoFile)
+      setAiStatus(filename, 'processing')
       fetch('/process?target_lang=fr&model_size=tiny', {
         method: 'POST',
         body: aiForm,
@@ -74,8 +75,14 @@ export default function UploadVideo() {
           if (!r.ok) throw new Error(`Indexation IA échouée (${r.status})`)
           return r.json()
         })
-        .then(data => { if (data?.chapters) cacheChapters(filename, data.chapters) })
-        .catch(err => console.error('Indexation IA en arrière-plan :', err))
+        .then(data => {
+          if (data?.chapters) cacheChapters(filename, data.chapters)
+          setAiStatus(filename, 'done')
+        })
+        .catch(err => {
+          console.error('Indexation IA en arrière-plan :', err)
+          setAiStatus(filename, 'error')
+        })
 
       navigate(`/app/player/${filename}`)
     } catch (err) {
