@@ -55,6 +55,7 @@ export default function AnnotatedReviewPlayer({
   const hlsRef     = useRef(null)
   const keyTokenRef = useRef(null)
   const lastCursorSentRef = useRef(0)
+  const processedMsgCountRef = useRef(0) // messages est cumulatif (append-only) — on ne rejoue que les nouveaux
   const [currentTime, setCurrentTime] = useState(0)
   const [duration,    setDuration]    = useState(0)
   const [playing,     setPlaying]     = useState(false)
@@ -128,9 +129,15 @@ export default function AnnotatedReviewPlayer({
       .catch(() => {})
   }, [sessionId])
 
-  // Traiter les messages WS entrants des autres utilisateurs
+  // Traiter les messages WS entrants des autres utilisateurs.
+  // `messages` est cumulatif (useWebSocket ne fait qu'accumuler) — sans ce
+  // découpage, chaque nouveau message (curseur y compris, très fréquent)
+  // rejouait TOUT l'historique : toasts et réactions se dupliquaient à l'infini,
+  // et le travail par message croissait sans borne au fil de la session.
   useEffect(() => {
-    messages.forEach(msg => {
+    const newMessages = messages.slice(processedMsgCountRef.current)
+    processedMsgCountRef.current = messages.length
+    newMessages.forEach(msg => {
       if (msg.type === 'annotation_added') {
         const a = msg.annotation
         if (a.type === 'comment') {

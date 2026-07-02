@@ -70,9 +70,12 @@ export default function UploadVideo() {
         method: 'POST',
         body: aiForm,
       })
-        .then(r => (r.ok ? r.json() : null))
+        .then(r => {
+          if (!r.ok) throw new Error(`Indexation IA échouée (${r.status})`)
+          return r.json()
+        })
         .then(data => { if (data?.chapters) cacheChapters(filename, data.chapters) })
-        .catch(() => {})
+        .catch(err => console.error('Indexation IA en arrière-plan :', err))
 
       navigate(`/app/player/${filename}`)
     } catch (err) {
