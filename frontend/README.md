@@ -259,3 +259,56 @@ Pour un usage en composant pur (hors routing) :
 ---
 
 *Collabix — ESTIAM x 42C Hackathon 2026*
+
+---
+
+## Choix techniques — Frontend
+
+### React 18 + Vite
+- Framework UI déclaratif avec hooks modernes (`useState`, `useEffect`, `useRef`, `useCallback`, `useMemo`)
+- Vite comme bundler : démarrage instantané, HMR (Hot Module Replacement) en développement
+- Composants fonctionnels uniquement — architecture claire et testable
+- Routing via React Router v6 avec routes protégées par rôle
+
+### CSS custom (sans framework UI)
+- Zéro dépendance à Tailwind, Bootstrap ou MUI — contrôle total sur le rendu
+- **CSS variables** pour le theming (`--bg`, `--surface`, `--primary`, etc.) : un seul fichier `theme.css` pilote light et dark mode
+- `[data-theme="dark"]` sur `<html>` pour le dark mode — standard natif, performant
+- Transitions fluides via CSS (`transition: background 0.3s ease`) sans JavaScript
+
+### Double canvas pour les annotations
+- Deux `<canvas>` superposés : un pour les annotations finalisées, un pour le dessin en cours (preview)
+- Le canvas de preview est effacé et redessiné à chaque `mousemove` — fluidité maximale sans redessiner toutes les annotations
+- `ResizeObserver` pour recalibrer les dimensions du canvas en temps réel (redimensionnement, plein écran)
+- Annotations stockées en state React — prêtes à être envoyées via WebSocket ou API
+
+### Context API pour l'état global
+- `AuthContext` : session utilisateur, rôle (`admin` / `user`), login/logout
+- `ThemeContext` : préférence light/dark persistée en `localStorage`
+- Pas de Redux — la complexité de l'état ne le justifie pas pour ce périmètre
+
+### WebSocket (hook custom)
+- `useWebSocket.js` : connexion, écoute des messages, envoi d'événements
+- Activé uniquement si `VITE_WS_URL` est défini — l'app fonctionne en mode solo sans configuration
+- Protocole d'événements aligné avec le backend FastAPI : `annotation`, `annotationDelete`, `comment`
+
+### Données mock (Mixkit CDN)
+- 32 vidéos MP4 accessibles directement par URL publique — pas de serveur nécessaire pour la démo
+- Miniatures générées côté client : `<video preload="metadata">` seeké à 2s → frame capturée sans canvas (pas de problème CORS)
+- Champ `duration` en string `"MM:SS"` → à remplacer par la valeur réelle renvoyée par l'API
+
+### Export JSON
+- Format structuré et réutilisable : `id`, `tool`, `color`, `start`, `end`, `timestamp`, `createdAt`
+- Téléchargement via `URL.createObjectURL(Blob)` — natif, sans dépendance
+- Conçu pour être réimportable et exploitable côté backend ou autre outil
+
+### Choix d'architecture notables
+| Décision | Pourquoi |
+|----------|----------|
+| Pas de state manager externe | Context API suffit pour auth + thème ; les annotations restent locales au player |
+| CSS custom plutôt que Tailwind | Contrôle total sur les animations, transitions et variables de thème |
+| Double canvas | Performances : on ne redessine pas tout à chaque pixel de mouvement |
+| `object-fit: contain` sur la vidéo | La vidéo n'est jamais coupée, les proportions sont toujours respectées |
+| Toolbar masquée par défaut | Priorité à la lecture — l'annotation est un mode explicitement activé |
+| Feed mixte chronologique | Vue unifiée de la session de revue sans jongler entre onglets |
+
