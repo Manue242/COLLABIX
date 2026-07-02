@@ -2058,3 +2058,462 @@ a { text-decoration: none; }
   outline: none;
 }
 .cp-hex-input:focus { border-color: #F97316; }
+
+/* ═══════════════════════════════════════════
+   REVIEW FEED — feed mixte annotations + commentaires
+   ═══════════════════════════════════════════ */
+.rf-wrap {
+  flex: 1; display: flex; flex-direction: column;
+  overflow: hidden; background: #1A1A1A;
+}
+
+/* Header */
+.rf-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px 10px;
+  border-bottom: 0.5px solid #2A2A2A; flex-shrink: 0;
+}
+.rf-count { font-size: 12px; font-weight: 600; color: #F9FAFB; }
+.rf-sort { display: flex; gap: 2px; background: #111; border-radius: 6px; padding: 2px; }
+.rf-sort-btn {
+  font-size: 10px; padding: 3px 8px; border-radius: 4px;
+  border: none; background: none; color: #6B7280; cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.rf-sort-btn.active { background: #2A2A2A; color: #F97316; }
+
+/* Zone saisie */
+.rf-add {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 12px 14px; border-bottom: 0.5px solid #2A2A2A; flex-shrink: 0;
+}
+.rf-add-wrap { flex: 1; min-width: 0; }
+.rf-timecode {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; color: #FB923C;
+  background: rgba(249,115,22,0.12);
+  padding: 2px 7px; border-radius: 20px; margin-bottom: 6px;
+}
+.rf-input {
+  width: 100%; background: transparent;
+  border: none; border-bottom: 1px solid #3A3A3A;
+  color: #F3F4F6; font-size: 13px;
+  padding: 4px 0 6px; outline: none;
+  font-family: 'Inter', sans-serif;
+  transition: border-color 0.15s;
+}
+.rf-input:focus { border-bottom-color: #F97316; }
+.rf-input::placeholder { color: #6B7280; }
+.rf-add-btns { display: flex; justify-content: flex-end; gap: 6px; margin-top: 8px; }
+.rf-cancel {
+  background: none; border: none; color: #6B7280;
+  font-size: 12px; cursor: pointer; padding: 4px 10px; border-radius: 16px;
+}
+.rf-cancel:hover { background: #2A2A2A; color: #D1D5DB; }
+.rf-submit {
+  background: #F97316; border: none; color: #fff;
+  font-size: 12px; font-weight: 500;
+  padding: 4px 14px; border-radius: 16px; cursor: pointer;
+}
+.rf-submit:hover { background: #EA580C; }
+
+/* Liste */
+.rf-list { flex: 1; overflow-y: auto; }
+.rf-list::-webkit-scrollbar { width: 3px; }
+.rf-list::-webkit-scrollbar-thumb { background: #2A2A2A; border-radius: 4px; }
+.rf-empty { padding: 20px 14px; font-size: 12px; color: #4B5563; text-align: center; }
+
+/* Item commun */
+.rf-item {
+  display: flex; gap: 10px; padding: 12px 14px;
+  border-bottom: 0.5px solid #1F1F1F;
+  transition: background 0.15s;
+}
+.rf-item:last-child { border-bottom: none; }
+.rf-body { flex: 1; min-width: 0; }
+.rf-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
+.rf-name { font-size: 12px; font-weight: 600; color: #F9FAFB; }
+.rf-ago  { font-size: 10px; color: #6B7280; }
+.rf-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; color: #FB923C;
+  background: rgba(249,115,22,0.12);
+  padding: 1px 6px; border-radius: 10px;
+  border: none; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.15s;
+}
+.rf-badge:hover { background: rgba(249,115,22,0.25); }
+.rf-text { font-size: 13px; color: #D1D5DB; line-height: 1.5; margin-bottom: 6px; }
+
+/* Actions commentaire */
+.rf-actions { display: flex; gap: 2px; }
+.rf-act {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: #6B7280;
+  background: none; border: none; cursor: pointer;
+  padding: 3px 8px; border-radius: 16px;
+  transition: background 0.15s, color 0.15s;
+}
+.rf-act:hover { background: #2A2A2A; color: #D1D5DB; }
+.rf-act.liked { color: #f43f5e; }
+
+/* Réponse inline */
+.rf-reply-row { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.rf-reply-input {
+  flex: 1; background: #111; border: 0.5px solid #2A2A2A;
+  border-radius: 16px; color: #F3F4F6; font-size: 12px;
+  padding: 5px 12px; outline: none; font-family: 'Inter', sans-serif;
+}
+.rf-reply-input:focus { border-color: #F97316; }
+.rf-reply-send {
+  background: #F97316; border: none; color: #fff;
+  font-size: 11px; font-weight: 500;
+  padding: 5px 12px; border-radius: 16px; cursor: pointer;
+}
+
+/* Item annotation */
+.rf-item-ann { cursor: pointer; }
+.rf-item-ann:hover { background: #1F1F1F; }
+.rf-ann-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.rf-ann-desc {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: #9CA3AF;
+}
+.rf-ann-seek {
+  font-size: 10px; color: #F97316; opacity: 0;
+  transition: opacity 0.15s;
+}
+.rf-item-ann:hover .rf-ann-seek { opacity: 1; }
+
+/* 3 points dans le feed */
+.rf-act-more {
+  width: 28px; height: 28px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+}
+
+/* ═══════════════════════════════════════════
+   PLAYER REDESIGN — toolbar flottante + sidebar togglable
+   ═══════════════════════════════════════════ */
+
+/* Header boutons texte+icône */
+.player-header-btn {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 7px;
+  border: 1px solid #2A2A2A; background: #1A1A1A;
+  color: #9CA3AF; font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+}
+.player-header-btn:hover { border-color: #F97316; color: #F97316; }
+.player-header-btn.active {
+  background: rgba(249,115,22,0.12);
+  border-color: #F97316; color: #F97316;
+}
+
+/* Drag handle entre vidéo et sidebar */
+.player-drag-handle {
+  width: 5px; flex-shrink: 0;
+  background: #1A1A1A;
+  cursor: col-resize;
+  transition: background 0.15s;
+  position: relative;
+}
+.player-drag-handle:hover { background: #F97316; }
+.player-drag-handle::after {
+  content: '';
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px; height: 32px;
+  background: #3A3A3A; border-radius: 2px;
+}
+
+/* Bouton fermer sidebar */
+.player-sidebar-title {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.player-sidebar-close {
+  width: 22px; height: 22px; border-radius: 5px;
+  background: none; border: none; color: #6B7280;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.player-sidebar-close:hover { background: #2A2A2A; color: #fff; }
+
+/* ── TOOLBAR FLOTTANTE VERTICALE ── */
+.player-float-toolbar {
+  position: absolute;
+  left: 12px; top: 90px;
+  z-index: 20;
+  background: rgba(15,15,15,0.92);
+  backdrop-filter: blur(12px);
+  border: 1px solid #2A2A2A;
+  border-radius: 12px;
+  padding: 8px 6px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: dropdownEnter 0.2s ease forwards;
+}
+
+.pft-btn {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: none; border: 1px solid transparent;
+  color: #9CA3AF; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.pft-btn:hover { background: #2A2A2A; color: #fff; }
+.pft-btn.active {
+  background: rgba(249,115,22,0.15);
+  border-color: #F97316; color: #F97316;
+}
+.pft-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.pft-undo:hover:not(:disabled) { color: #FCD34D !important; border-color: #FCD34D !important; }
+.pft-clear:hover:not(:disabled) { color: #F87171 !important; border-color: #F87171 !important; }
+
+.pft-sep {
+  width: 22px; height: 1px;
+  background: #2A2A2A; margin: 2px 0;
+}
+
+/* ColorPicker dans la toolbar verticale */
+.pft-color-wrap .cp-trigger {
+  width: 34px; height: 34px; padding: 0;
+  justify-content: center; border-radius: 8px;
+}
+.pft-color-wrap .cp-panel {
+  left: calc(100% + 10px) !important;
+  right: auto !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  bottom: auto !important;
+}
+
+/* Contrôles row */
+.player-controls-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 8px;
+}
+
+/* ── FIX contrôles player — play à gauche ── */
+.player-page .player-controls {
+  background: #1A1A1A !important;
+  border-top: 0.5px solid #2A2A2A !important;
+  padding: 8px 14px 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+.player-page .player-controls-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-top: 8px !important;
+  flex-direction: row !important;
+}
+/* Play tout à gauche */
+.player-page .player-play-btn {
+  order: -1 !important;
+  flex-shrink: 0 !important;
+}
+/* Timecode juste après play */
+.player-page .player-time {
+  order: 0 !important;
+  flex-shrink: 0 !important;
+}
+/* Volume et fullscreen à droite */
+.player-page .player-volume-wrap { order: 2 !important; margin-left: auto !important; }
+.player-page .player-ctrl-btn    { order: 3 !important; }
+
+/* ── FIX barre de progression visible ── */
+.player-page .player-progress-wrap {
+  width: 100% !important;
+  flex: none !important;
+  cursor: pointer !important;
+  padding: 6px 0 !important;
+  display: block !important;
+}
+.player-page .player-progress-bg {
+  height: 4px !important;
+  background: #3A3A3A !important;
+  border-radius: 2px !important;
+  position: relative !important;
+}
+.player-page .player-progress-fill {
+  height: 4px !important;
+  background: #F97316 !important;
+  border-radius: 2px !important;
+  transition: width 0.1s linear !important;
+}
+.player-page .player-progress-bg::after {
+  content: '';
+  position: absolute;
+  top: 50%; right: 0;
+  width: 0; height: 0;
+  background: #F97316;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  transition: width 0.1s, height 0.1s;
+}
+.player-page .player-progress-wrap:hover .player-progress-bg::after {
+  width: 12px; height: 12px;
+  right: -6px;
+}
+
+/* ═══════════════════════════════════════════
+   FIX AFFICHAGE VIDÉO — jamais coupée
+   ═══════════════════════════════════════════ */
+
+/* Le body prend toute la hauteur disponible */
+.player-page {
+  height: 100vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+.player-page .player-body {
+  flex: 1 !important;
+  min-height: 0 !important;
+  display: flex !important;
+  overflow: hidden !important;
+}
+
+.player-page .player-left {
+  flex: 1 !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+}
+
+/* video-outer = toute la hauteur moins les contrôles */
+.player-page .player-video-outer {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  max-height: none !important; /* ← supprime le max-height qui coupait */
+  overflow: hidden !important;
+  background: #000 !important;
+}
+
+/* video-wrap = la zone noire qui centre la vidéo */
+.player-page .player-video-wrap {
+  flex: 1 !important;
+  min-height: 0 !important;
+  position: relative !important;
+  background: #000 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+}
+
+/* La vidéo s'adapte sans jamais déborder ni être coupée */
+.player-page .player-video-wrap video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important; /* ← bandes noires plutôt que crop */
+  display: block !important;
+}
+
+/* Canvas superposé */
+.player-page .player-video-wrap canvas {
+  position: absolute !important;
+  top: 0 !important; left: 0 !important;
+  width: 100% !important; height: 100% !important;
+}
+
+/* Contrôles — hauteur fixe, ne grandissent pas */
+.player-page .player-controls {
+  flex-shrink: 0 !important;
+  background: #1A1A1A !important;
+  border-top: 0.5px solid #2A2A2A !important;
+  padding: 8px 14px 10px !important;
+}
+
+/* Fullscreen — même logique */
+.player-page .player-video-outer:fullscreen {
+  max-height: 100vh !important;
+  height: 100vh !important;
+}
+.player-page .player-video-outer:-webkit-full-screen {
+  max-height: 100vh !important;
+  height: 100vh !important;
+}
+
+/* ── EFFET PLAY/PAUSE AU CLIC ── */
+.player-click-effect {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 30;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  animation: clickPulse 0.6s ease forwards;
+  pointer-events: none;
+}
+@keyframes clickPulse {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+  30%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); }
+}
+
+/* ── CURSEUR POINTER en mode curseur ── */
+.player-page .player-video-wrap[style*="pointer"] canvas {
+  pointer-events: none !important;
+  cursor: pointer !important;
+}
+
+/* ── MENU CONTEXTUEL 3 POINTS ── */
+.rf-more-wrap { position: relative; }
+
+.rf-menu {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  right: 0;
+  background: #1E1E1E;
+  border: 0.5px solid #3A3A3A;
+  border-radius: 8px;
+  padding: 4px;
+  min-width: 140px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  z-index: 100;
+  animation: dropdownEnter 0.15s ease forwards;
+}
+
+.rf-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 7px 10px;
+  background: none; border: none;
+  color: #D1D5DB; font-size: 12px;
+  cursor: pointer; border-radius: 6px;
+  text-align: left; transition: background 0.1s;
+}
+.rf-menu-item:hover { background: #2A2A2A; color: #fff; }
+.rf-menu-danger { color: #F87171 !important; }
+.rf-menu-danger:hover { background: rgba(248,113,113,0.1) !important; }
+.rf-menu-warn { color: #FCD34D !important; }
+.rf-menu-warn:hover { background: rgba(252,211,77,0.08) !important; }
+
+/* ── ÉDITION INLINE ── */
+.rf-edit-wrap { margin-bottom: 6px; }
+.rf-edit-input {
+  width: 100%; background: #111;
+  border: 0.5px solid #F97316;
+  border-radius: 6px; color: #F3F4F6;
+  font-size: 13px; padding: 5px 8px;
+  outline: none; font-family: 'Inter', sans-serif;
+}
+.rf-edit-btns {
+  display: flex; justify-content: flex-end;
+  gap: 6px; margin-top: 6px;
+}

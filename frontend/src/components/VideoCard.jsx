@@ -36,8 +36,6 @@ function VideoThumb({ src, gradient }) {
 
 export default function VideoCard({ video, onClick }) {
   const badge = BADGE_STYLES[video.category] || { bg: '#F3F4F6', color: '#374151' }
-  const statusLabel = video.progress === 100 ? 'Terminé' : video.progress > 0 ? 'En cours' : null
-  const statusBg    = video.progress === 100 ? 'rgba(21,128,61,0.85)' : 'rgba(124,58,237,0.85)'
 
   return (
     <div className="vcard" onClick={() => onClick?.(video)}>
@@ -51,9 +49,6 @@ export default function VideoCard({ video, onClick }) {
           </div>
         </div>
         <span className="vcard-duration">{video.duration}</span>
-        {statusLabel && (
-          <span className="vcard-status" style={{ background: statusBg }}>{statusLabel}</span>
-        )}
       </div>
 
       <div className="vcard-progress">
