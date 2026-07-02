@@ -17,6 +17,7 @@ const TOOLS = [
 const CURSOR_SEND_INTERVAL_MS = 80
 const CURSOR_STALE_MS = 3000
 const CURSOR_COLORS = ['#F97316', '#059669', '#0369a1', '#0f766e', '#EA580C', '#be185d', '#dc2626']
+const DURATION_OPTIONS = [2, 3, 5, 8, 10, 15]
 
 function cursorColor(userId) {
   const code = userId ? userId.charCodeAt(0) : 0
@@ -49,6 +50,7 @@ export default function AnnotatedReviewPlayer({
   const [dimensions,  setDimensions]  = useState({ width: 0, height: 0 })
   const [tool,        setTool]        = useState('arrow')
   const [color,       setColor]       = useState('#F97316')
+  const [annotationDuration, setAnnotationDuration] = useState(5) // secondes d'affichage à l'écran
   const [annotations, setAnnotations] = useState([])
   const [comments,    setComments]    = useState([])
   const [muted, setMuted] = useState(false)
@@ -432,6 +434,16 @@ export default function AnnotatedReviewPlayer({
             </div>
             <div className="player-colors">
               <ColorPicker color={color} onChange={setColor} />
+              <select
+                className="player-duration-select"
+                value={annotationDuration}
+                onChange={e => setAnnotationDuration(Number(e.target.value))}
+                title="Durée d'affichage de l'annotation"
+              >
+                {DURATION_OPTIONS.map(s => (
+                  <option key={s} value={s}>{s}s</option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -452,7 +464,7 @@ export default function AnnotatedReviewPlayer({
                 width={dimensions.width}
                 height={dimensions.height}
                 currentTime={currentTime}
-                tool={tool} color={color}
+                tool={tool} color={color} duration={annotationDuration}
                 annotations={annotations}
                 onAnnotationCreate={handleAnnotationCreate}
                 onAnnotationDelete={handleAnnotationDelete}
