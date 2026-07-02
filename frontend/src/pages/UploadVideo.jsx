@@ -55,6 +55,17 @@ export default function UploadVideo() {
         throw new Error(err.detail || `Erreur ${res.status}`)
       }
       const { filename } = await res.json()
+
+      // Indexation IA en arrière-plan (transcription + recherche sémantique) —
+      // ne bloque pas la navigation, le pipeline prend plusieurs minutes.
+      // Sans ça une vidéo uploadée ici n'est jamais indexée (seul /ai le fait).
+      const aiForm = new FormData()
+      aiForm.append('file', videoFile)
+      fetch('/process?target_lang=fr&model_size=tiny&skip_translation=true', {
+        method: 'POST',
+        body: aiForm,
+      }).catch(() => {})
+
       navigate(`/app/player/${filename}`)
     } catch (err) {
       setError(err.message || "Erreur lors de la publication")
