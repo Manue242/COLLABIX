@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header.jsx'
 import { CATEGORIES } from '../data/mockVideos.js'
+import { cacheChapters } from '../utils/aiCache.js'
 
 export default function UploadVideo() {
   const navigate = useNavigate()
@@ -64,7 +65,10 @@ export default function UploadVideo() {
       fetch('/process?target_lang=fr&model_size=tiny&skip_translation=true', {
         method: 'POST',
         body: aiForm,
-      }).catch(() => {})
+      })
+        .then(r => (r.ok ? r.json() : null))
+        .then(data => { if (data?.chapters) cacheChapters(filename, data.chapters) })
+        .catch(() => {})
 
       navigate(`/app/player/${filename}`)
     } catch (err) {

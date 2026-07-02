@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react'
 import Header from '../components/Header.jsx'
+import { cacheChapters } from '../utils/aiCache.js'
 
 export default function AIPage() {
   const fileInputRef = useRef(null)
@@ -42,7 +43,9 @@ export default function AIPage() {
       formData.append('file', videoFile)
       const res = await fetch(`/process?${params}`, { method: 'POST', body: formData })
       if (!res.ok) throw new Error(`Erreur ${res.status}`)
-      setResult(await res.json())
+      const data = await res.json()
+      setResult(data)
+      if (data.chapters) cacheChapters(videoFile.name, data.chapters)
     } catch (err) {
       setProcessError(err.message || 'Erreur lors du traitement')
     } finally {
