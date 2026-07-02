@@ -749,6 +749,24 @@ a { text-decoration: none; }
   border-radius: 0 !important;
 }
 
+/* Curseurs collaboratifs des autres utilisateurs connectés */
+.player-remote-cursor {
+  position: absolute; pointer-events: none;
+  transform: translate(-2px, -2px);
+  z-index: 5;
+}
+.player-remote-cursor-dot {
+  display: block; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--cursor-color, #F97316);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.6);
+}
+.player-remote-cursor-label {
+  position: absolute; left: 14px; top: -2px; white-space: nowrap;
+  font-size: 10px; font-weight: 600; color: #fff;
+  background: var(--cursor-color, #F97316);
+  padding: 1px 6px; border-radius: 10px;
+}
+
 /* Contrôles */
 .player-controls {
   background: #1A1A1A;
