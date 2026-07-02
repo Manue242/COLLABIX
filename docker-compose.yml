@@ -54,6 +54,14 @@ services:
       sh -c "until ollama list >/dev/null 2>&1; do echo 'waiting for ollama...'; sleep 2; done; ollama pull llama3.2"
     restart: "no"
 
+  hls-init:
+    image: jrottenberg/ffmpeg:6.1-ubuntu2204
+    entrypoint: ["sh", "/scripts/hls-init.sh"]
+    volumes:
+      - ./backend/media:/media
+      - ./backend/scripts/hls-init.sh:/scripts/hls-init.sh:ro
+    restart: "no"
+
   ai-api:
     build: ./ai-data/indexation-semantique
     ports:
