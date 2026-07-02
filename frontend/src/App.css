@@ -879,6 +879,10 @@ a { text-decoration: none; }
 
 .ct-text { font-size: 13px; color: #D1D5DB; line-height: 1.55; margin-bottom: 8px; }
 
+.ct-annotation-item { opacity: 0.92; }
+.ct-annotation-label { margin-bottom: 0; }
+.ct-kind-icon { display: inline-block; width: 16px; text-align: center; font-weight: 700; }
+
 /* Actions — tous identiques, sans bordure */
 .ct-actions { display: flex; align-items: center; gap: 2px; }
 .ct-act {

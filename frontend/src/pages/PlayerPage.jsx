@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 import AnnotationCanvas from '../components/AnnotationCanvas.jsx'
@@ -51,18 +51,28 @@ export default function PlayerPage() {
     gradient: 'linear-gradient(135deg,#1e1b4b,#4338ca)',
   }
 
-  // Charger les annotations persistées depuis le backend
+  // Charger les annotations + commentaires persistés depuis le backend
   useEffect(() => {
     fetch(`/api/annotations?video_id=${id}`)
       .then(r => r.json())
       .then(data => {
         const drawings = data
           .filter(a => a.type === 'drawing')
-          .map(a => { try { return { ...JSON.parse(a.content), id: a.id, timestamp: a.timestamp, color: a.color } } catch { return null } })
+          .map(a => {
+            try {
+              return {
+                ...JSON.parse(a.content), id: a.id, timestamp: a.timestamp, color: a.color,
+                author: a.username || 'Utilisateur', createdAt: a.created_at, user_id: a.user_id ?? null,
+              }
+            } catch { return null }
+          })
           .filter(Boolean)
         const loadedComments = data
           .filter(a => a.type === 'comment')
-          .map(a => ({ id: a.id, text: a.content, timestamp: a.timestamp, author: a.username || 'Utilisateur' }))
+          .map(a => ({
+            id: a.id, text: a.content, timestamp: a.timestamp,
+            author: a.username || 'Utilisateur', createdAt: a.created_at, user_id: a.user_id ?? null,
+          }))
         setAnnotations(drawings)
         setComments(loadedComments)
       })
@@ -74,15 +84,34 @@ export default function PlayerPage() {
     messages.forEach(msg => {
       if (msg.type === 'annotation_added') {
         const a = msg.annotation
-        try {
-          const shape = { ...JSON.parse(a.content), id: a.id, timestamp: a.timestamp, color: a.color }
-          setAnnotations(p => p.some(x => x.id === a.id) ? p : [...p, shape])
-        } catch {}
+        if (a.type === 'comment') {
+          setComments(p => p.some(x => x.id === a.id) ? p : [...p, {
+            id: a.id, text: a.content, timestamp: a.timestamp,
+            author: a.username || 'Utilisateur', createdAt: a.created_at || new Date().toISOString(),
+            user_id: a.user_id ?? null,
+          }])
+        } else {
+          try {
+            const shape = {
+              ...JSON.parse(a.content), id: a.id, timestamp: a.timestamp, color: a.color,
+              author: a.username || 'Utilisateur', createdAt: a.created_at, user_id: a.user_id ?? null,
+            }
+            setAnnotations(p => p.some(x => x.id === a.id) ? p : [...p, shape])
+          } catch {}
+        }
       } else if (msg.type === 'annotation_deleted') {
         setAnnotations(p => p.filter(a => a.id !== msg.id))
+        setComments(p => p.filter(c => c.id !== msg.id))
       }
     })
   }, [messages])
+
+  // Fusionne annotations dessinées + commentaires en une seule timeline triée
+  const timelineItems = useMemo(() => {
+    const commentItems    = comments.map(c => ({ kind: 'comment', ...c }))
+    const annotationItems = annotations.map(a => ({ kind: 'annotation', ...a }))
+    return [...commentItems, ...annotationItems].sort((x, y) => x.timestamp - y.timestamp)
+  }, [comments, annotations])
 
   // Mesure la vidéo pour le canvas
   useEffect(() => {
@@ -153,6 +182,7 @@ export default function PlayerPage() {
     if (videoRef.current) videoRef.current.currentTime = ratio * duration
   }
   const handleAnnotationCreate = async (a) => {
+    const withAuthor = { ...a, author: user?.username || 'Vous', createdAt: new Date().toISOString(), user_id: user?.id ?? null }
     try {
       const res = await fetch('/api/annotations', {
         method: 'POST',
@@ -163,14 +193,15 @@ export default function PlayerPage() {
           content: JSON.stringify(a),
           timestamp: currentTime,
           color: a.color || color,
+          user_id: user?.id || null,
         }),
       })
       const saved = await res.json()
-      const shape = { ...a, id: saved.id }
+      const shape = { ...withAuthor, id: saved.id }
       setAnnotations(p => [...p, shape])
-      send({ type: 'annotation_added', annotation: saved })
+      send({ type: 'annotation_added', annotation: { ...saved, username: user?.username } })
     } catch {
-      setAnnotations(p => [...p, a])
+      setAnnotations(p => [...p, withAuthor])
     }
   }
 
@@ -200,10 +231,13 @@ export default function PlayerPage() {
           content: c.text,
           timestamp: c.timestamp ?? currentTime,
           color: '#3B82F6',
+          user_id: user?.id || null,
         }),
       })
       const saved = await res.json()
-      setComments(p => [...p, { ...c, id: saved.id }])
+      const withId = { ...c, id: saved.id }
+      setComments(p => [...p, withId])
+      send({ type: 'annotation_added', annotation: { ...saved, username: user?.username, content: c.text } })
     } catch {
       setComments(p => [...p, c])
     }
@@ -375,9 +409,9 @@ export default function PlayerPage() {
 
         {/* ── Sidebar commentaires ── */}
         <div className="player-right">
-          <div className="player-sidebar-title">Commentaires</div>
+          <div className="player-sidebar-title">Commentaires &amp; annotations</div>
           <CommentThread
-            comments={comments}
+            items={timelineItems}
             currentTime={currentTime}
             onAddComment={handleAddComment}
             onSeek={handleSeekTime}
