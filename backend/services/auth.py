@@ -12,6 +12,7 @@ from schemas.auth import RegisterRequest
 SECRET_KEY = os.getenv("JWT_SECRET", "changeme-in-production")
 ALGORITHM = "HS256"
 EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", 1440))  # 24h
+KEY_TOKEN_EXPIRE_SECONDS = 60
 
 
 def hash_password(password: str) -> str:
@@ -26,6 +27,21 @@ def create_token(user_id: str) -> str:
     payload = {
         "sub": user_id,
         "exp": datetime.now(timezone.utc) + timedelta(minutes=EXPIRE_MINUTES),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def create_key_token(user_id: str) -> str:
+    """
+    Token dédié à la récupération de la clé HLS, valable 60s seulement (scope=hls-key) —
+    distinct du token de session (24h). Une clé de déchiffrement remise sur la seule foi
+    du token de session normal ne serait pas "Zero-Trust" : ici, même un token de session
+    volé ne donne pas un accès prolongé à la clé, il faut en re-demander un à chaque fois.
+    """
+    payload = {
+        "sub": user_id,
+        "scope": "hls-key",
+        "exp": datetime.now(timezone.utc) + timedelta(seconds=KEY_TOKEN_EXPIRE_SECONDS),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 

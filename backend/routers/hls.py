@@ -4,8 +4,9 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
-from dependencies import get_current_user
+from dependencies import get_current_user, get_key_token_user
 from models.user import User
+from services import auth as auth_service
 
 router = APIRouter(prefix="/api/video", tags=["hls"])
 
@@ -24,8 +25,20 @@ def _check_rate_limit(user_id: str) -> None:
     _request_log[user_id].append(now)
 
 
+@router.get("/key-token")
+async def get_key_token(current_user: User = Depends(get_current_user)) -> dict:
+    """
+    Émet un token de courte durée (60s, scope=hls-key), à envoyer sur GET /api/video/key
+    (typiquement via xhrSetup côté lecteur HLS). Exige un token de session valide.
+    """
+    return {
+        "token": auth_service.create_key_token(str(current_user.id)),
+        "expires_in": auth_service.KEY_TOKEN_EXPIRE_SECONDS,
+    }
+
+
 @router.get("/key")
-async def get_hls_key(current_user: User = Depends(get_current_user)) -> Response:
+async def get_hls_key(current_user: User = Depends(get_key_token_user)) -> Response:
     _check_rate_limit(str(current_user.id))
     if not KEY_PATH.exists():
         raise HTTPException(
