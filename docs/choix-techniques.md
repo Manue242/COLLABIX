@@ -36,22 +36,45 @@
 
 ## Frontend
 
-### Player vidéo — `<video>` natif + hls.js
-- Pas de librairie de player complète (react-player, video.js) : la balise `<video>` native suffit pour la lecture progressive, et **hls.js** est ajouté spécifiquement pour le flux HLS chiffré du pôle Cyber — `xhrSetup` permet d'attacher facilement le token de clé à la requête AES, ce que peu d'alternatives exposent aussi simplement.
-- Repli automatique sur le MP4 direct si le HLS n'est pas généré, pour ne jamais bloquer la lecture en dev/démo.
+### React 18 + Vite 5
+- Framework UI déclaratif avec hooks modernes (`useState`, `useEffect`, `useRef`, `useCallback`, `useMemo`)
+- Vite comme bundler : démarrage instantané, HMR (Hot Module Replacement) en développement
+- Composants fonctionnels uniquement — architecture claire et testable
+- Routing via React Router v6, routes protégées via `ProtectedRoute` (redirige vers `/login` si pas de token)
 
-### Dessin — Canvas API native
-- Pas de librairie de dessin (Fabric.js, Konva) : les besoins (flèche, rectangle, ellipse, trait libre, texte) sont simples et fixes, une dépendance supplémentaire n'aurait rien apporté.
-- Deux calques de `<canvas>` superposés — un pour les tracés validés, un pour la prévisualisation pendant le dessin — pour éviter de redessiner toute la scène à chaque `mousemove`.
+### CSS custom (sans framework UI)
+- Zéro dépendance à Tailwind, Bootstrap ou MUI — contrôle total sur le rendu
+- CSS variables pour le theming (`--bg`, `--surface`, `--primary`, etc.) : un seul fichier `theme.css` pilote light et dark mode
+- `[data-theme="dark"]` sur `<html>` pour le dark mode — standard natif, performant
+
+### Lecteur vidéo — `<video>` natif + hls.js
+- Élément `<video>` natif sans react-player ni video.js — contrôle total sur les événements, `object-fit: contain` (jamais coupée), Fullscreen API native
+- Miniatures générées côté client : `<video preload="metadata">` seeké à 2s → frame affichée sans canvas (pas de souci CORS)
+- **hls.js** ajouté spécifiquement pour le flux HLS chiffré du pôle Cyber — `xhrSetup` permet d'attacher facilement le token de clé à la requête AES, ce que peu d'alternatives exposent aussi simplement
+- Repli automatique sur le MP4 direct si le HLS n'est pas généré, pour ne jamais bloquer la lecture en dev/démo
+
+### Dessin — double canvas natif
+- Deux `<canvas>` superposés : un pour les tracés validés, un pour la prévisualisation pendant le dessin — le calque preview est effacé et redessiné à chaque `mousemove`, sans retoucher les annotations déjà validées
+- Pas de librairie tierce (Fabric.js, Konva) : les besoins (flèche, rectangle, ellipse, trait libre, texte) sont simples et fixes, une dépendance supplémentaire n'aurait rien apporté
+- `ResizeObserver` pour recalibrer les dimensions en temps réel (redimensionnement fenêtre, plein écran)
 
 ### Composant réutilisable — `AnnotatedReviewPlayer.jsx`
 - Le sujet impose que le lecteur soit livrable comme composant autonome (source vidéo / utilisateur / session en props). Choix : extraire toute la logique du player dans un seul composant sans dépendance à `react-router` ni à un contexte d'auth précis, et garder `PlayerPage.jsx` comme simple wrapper de routage qui lui fournit ces props. Alternative écartée : garder le player couplé à la page (plus simple à écrire, mais viole directement la contrainte non négociable du sujet).
 
-### État global — Context React, pas de librairie dédiée
-- Deux `Context` (`AuthContext`, `ThemeContext`) suffisent aux besoins réellement globaux (session utilisateur, thème). Redux/Zustand auraient été disproportionnés pour la taille de l'app ; le reste de l'état (player, annotations, formulaires) reste local aux composants qui l'utilisent.
+### État global — Context API, pas de librairie dédiée
+- `AuthContext` : session utilisateur, login/logout
+- `ThemeContext` : préférence light/dark persistée en `localStorage`
+- Pas de Redux/Zustand — la complexité de l'état ne le justifie pas pour ce périmètre ; le reste (player, annotations, formulaires) reste local aux composants qui l'utilisent
 
-### Temps réel — WebSocket natif
-- Pas de Socket.IO : FastAPI expose des WebSockets nativement, et le besoin (broadcast simple par room `video_id`) ne justifie pas la couche supplémentaire (reconnexion automatique, fallback long-polling...) qu'apporte Socket.IO pour un usage réseau local à 2-3 utilisateurs.
+### Temps réel — WebSocket natif (hook `useWebSocket.js`)
+- Pas de Socket.IO : FastAPI expose des WebSockets nativement, et le besoin (broadcast simple par room `video_id`) ne justifie pas la couche supplémentaire (reconnexion automatique, fallback long-polling...) pour un usage réseau local à 2-3 utilisateurs
+- Connexion, écoute des messages et envoi d'événements encapsulés dans un hook React générique
+- Trois types de message alignés avec le backend : `cursor`, `annotation_added`, `annotation_deleted` (les commentaires réutilisent `annotation_added` plutôt qu'un type dédié)
+
+### Export JSON
+- Format structuré et réutilisable, aligné sur le backend : `id`, `type`, `content`, `timestamp`, `color`, `user_id`
+- Téléchargement via `URL.createObjectURL(Blob)` — natif, sans dépendance
+- Conçu pour être réimportable (`POST /api/annotations/import`) et exploitable côté backend ou un autre outil
 
 ---
 
