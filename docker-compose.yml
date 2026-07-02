@@ -23,6 +23,11 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      # uvicorn --reload (watchfiles) rate parfois les événements fichier d'un
+      # bind mount Windows -> conteneur Linux sous Docker Desktop ; le polling
+      # forcé est plus lent mais fiable pour que le code modifié soit vraiment servi.
+      - WATCHFILES_FORCE_POLLING=true
     volumes:
       - ./backend:/app
     depends_on:

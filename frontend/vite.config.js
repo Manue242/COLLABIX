@@ -10,6 +10,14 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Docker Desktop sur Windows ne propage pas toujours fidèlement les
+    // événements de fichiers d'un bind mount host -> conteneur Linux vers le
+    // watcher natif de Vite : le HMR peut silencieusement arrêter de suivre
+    // les changements. Le polling est plus lent mais fiable dans ce contexte.
+    watch: {
+      usePolling: true,
+      interval: 300,
+    },
     proxy: {
       '/api':     { target: backendHttp, changeOrigin: true },
       '/auth':    { target: backendHttp, changeOrigin: true },
