@@ -36,55 +36,61 @@
 
 ## Frontend
 
-### React 18 + Vite 5.1
+### React 18 + Vite 5
 - Framework UI déclaratif avec hooks modernes (`useState`, `useEffect`, `useRef`, `useCallback`, `useMemo`)
-- Vite 5.1 comme bundler : démarrage instantané, HMR (Hot Module Replacement) en développement
+- Vite comme bundler : démarrage instantané, HMR (Hot Module Replacement) en développement
 - Composants fonctionnels uniquement — architecture claire et testable
-- Routing via React Router v6 avec routes protégées par rôle
+- Routing via React Router v6, routes protégées via `ProtectedRoute` (redirige vers `/login` si pas de token)
 
 ### CSS custom (sans framework UI)
 - Zéro dépendance à Tailwind, Bootstrap ou MUI — contrôle total sur le rendu
 - CSS variables pour le theming (`--bg`, `--surface`, `--primary`, etc.) : un seul fichier `theme.css` pilote light et dark mode
 - `[data-theme="dark"]` sur `<html>` pour le dark mode — standard natif, performant
-- Transitions fluides via CSS (`transition: background 0.3s ease`) sans JavaScript
 
-### Double canvas natif pour les annotations
-- Deux `<canvas>` superposés : un pour les annotations finalisées, un pour le dessin en cours (preview)
-- Le canvas de preview est effacé et redessiné à chaque `mousemove` — fluidité maximale sans redessiner toutes les annotations
-- Pas de librairie tierce (fabric.js, konva) — canvas natif pour un contrôle total et zéro overhead
+### Lecteur vidéo — `<video>` natif + hls.js
+- Élément `<video>` natif sans react-player ni video.js — contrôle total sur les événements, `object-fit: contain` (jamais coupée), Fullscreen API native
+- Miniatures générées côté client : `<video preload="metadata">` seeké à 2s → frame affichée sans canvas (pas de souci CORS)
+- **hls.js** ajouté spécifiquement pour le flux HLS chiffré du pôle Cyber — `xhrSetup` permet d'attacher facilement le token de clé à la requête AES, ce que peu d'alternatives exposent aussi simplement
+- Repli automatique sur le MP4 direct si le HLS n'est pas généré, pour ne jamais bloquer la lecture en dev/démo
+
+### Dessin — double canvas natif
+- Deux `<canvas>` superposés : un pour les tracés validés, un pour la prévisualisation pendant le dessin — le calque preview est effacé et redessiné à chaque `mousemove`, sans retoucher les annotations déjà validées
+- Pas de librairie tierce (Fabric.js, Konva) : les besoins (flèche, rectangle, ellipse, trait libre, texte) sont simples et fixes, une dépendance supplémentaire n'aurait rien apporté
 - `ResizeObserver` pour recalibrer les dimensions en temps réel (redimensionnement fenêtre, plein écran)
 
-### Context API pour l'état global
-- `AuthContext` : session utilisateur, rôle (`admin` / `user`), login/logout
+### Composant réutilisable — `AnnotatedReviewPlayer.jsx`
+- Le sujet impose que le lecteur soit livrable comme composant autonome (source vidéo / utilisateur / session en props). Choix : extraire toute la logique du player dans un seul composant sans dépendance à `react-router` ni à un contexte d'auth précis, et garder `PlayerPage.jsx` comme simple wrapper de routage qui lui fournit ces props. Alternative écartée : garder le player couplé à la page (plus simple à écrire, mais viole directement la contrainte non négociable du sujet).
+
+### État global — Context API, pas de librairie dédiée
+- `AuthContext` : session utilisateur, login/logout
 - `ThemeContext` : préférence light/dark persistée en `localStorage`
-- Pas de Redux — la complexité de l'état ne le justifie pas pour ce périmètre
+- Pas de Redux/Zustand — la complexité de l'état ne le justifie pas pour ce périmètre ; le reste (player, annotations, formulaires) reste local aux composants qui l'utilisent
 
-### Lecteur vidéo natif HTML5
-- Élément `<video>` natif sans react-player ni video.js — contrôle total sur les événements
-- `object-fit: contain` : la vidéo n'est jamais coupée, proportions toujours respectées
-- Fullscreen API native pour le plein écran
-- Miniatures générées côté client : `<video preload="metadata">` seeké à 2s → frame affichée sans canvas (pas de problème CORS)
-
-### WebSocket (hook custom `useWebSocket.js`)
-- Connexion, écoute des messages et envoi d'événements encapsulés dans un hook React
-- Activé uniquement si `VITE_WS_URL` est défini — l'app fonctionne en mode solo sans configuration
-- Protocole d'événements aligné avec le backend FastAPI : `annotation`, `annotationDelete`, `comment`
+### Temps réel — WebSocket natif (hook `useWebSocket.js`)
+- Pas de Socket.IO : FastAPI expose des WebSockets nativement, et le besoin (broadcast simple par room `video_id`) ne justifie pas la couche supplémentaire (reconnexion automatique, fallback long-polling...) pour un usage réseau local à 2-3 utilisateurs
+- Connexion, écoute des messages et envoi d'événements encapsulés dans un hook React générique
+- Trois types de message alignés avec le backend : `cursor`, `annotation_added`, `annotation_deleted` (les commentaires réutilisent `annotation_added` plutôt qu'un type dédié)
 
 ### Export JSON
-- Format structuré et réutilisable : `id`, `tool`, `color`, `start`, `end`, `timestamp`, `createdAt`
+- Format structuré et réutilisable, aligné sur le backend : `id`, `type`, `content`, `timestamp`, `color`, `user_id`
 - Téléchargement via `URL.createObjectURL(Blob)` — natif, sans dépendance
-- Conçu pour être réimportable et exploitable côté backend ou autre outil
+- Conçu pour être réimportable (`POST /api/annotations/import`) et exploitable côté backend ou un autre outil
 
 ---
 
-
 ## AI / Data
 
-> _À compléter par le dev IA_
+### Whisper — transcription
+- Modèle local (pas d'API payante), CPU-friendly avec la variante `tiny`/`base`, détection de langue intégrée. `tiny` est utilisé par défaut pour l'auto-indexation à l'upload (rapidité), `base`/`small` restent disponibles depuis la page `/ai` pour plus de précision.
 
-<!--
-  Justifier ici :
-  - Modèles choisis et pourquoi
-  - Framework ML (PyTorch, TensorFlow, HuggingFace...)
-  - Comment l'IA s'intègre dans le flux de révision vidéo
--->
+### Ollama + llama3.2 — traduction, résumé, chapitres
+- Alternative locale à l'API OpenAI : aucune clé API, aucun coût, tourne sur CPU. `llama3.2` (~2GB) offre un bon compromis qualité/poids pour un LLM généraliste utilisé en local dans un contexte hackathon.
+
+### KeyBERT — mots-clés
+- Extraction de mots-clés basée sur les embeddings de la transcription, sans modèle à entraîner ni service supplémentaire à héberger.
+
+### ChromaDB + sentence-transformers — recherche sémantique
+- Base vectorielle embarquée (pas de service externe type Pinecone/Weaviate) : suffisant pour indexer et rechercher dans un corpus de vidéos de taille hackathon, et respecte la contrainte « 100% local, aucun service payant ».
+
+### Intégration au flux de révision
+- Le pipeline IA était initialement une page isolée (`/ai`, upload manuel séparé). `UploadVideo.jsx` déclenche désormais `POST /process` automatiquement en arrière-plan après l'upload principal, pour que l'indexation IA fasse réellement partie du parcours de revue et pas seulement d'une démo à part.

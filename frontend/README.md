@@ -1,52 +1,30 @@
-# Lecteur de Revue Augmenté — Front-end
+# Collabix — Frontend
 
-Hackathon ESTIAM × 42c 2026 — Pôle 1 / Sujet A.
+React + Vite. Voir le [README racine](../README.md) pour la documentation complète (installation Docker, endpoints backend, structure des pages/composants) — ce fichier ne couvre que le démarrage local du frontend seul.
 
-## Installation
+## Démarrage local (sans Docker)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Placez une vidéo de démo dans `public/sample.mp4`, ou changez le `src` dans `App.jsx`.
-
-## Connexion au serveur WebSocket
-
-Créez un fichier `.env` à la racine :
-
-```
-VITE_WS_URL=ws://localhost:PORT
-```
-
-Le contrat de message attendu côté serveur (JSON) :
-
-```json
-{ "type": "annotation" | "comment", "payload": { ... } }
-```
+Le serveur backend (`http://localhost:8000`) et le pipeline IA (`http://localhost:8080`) doivent tourner séparément — voir le README racine. Le proxy Vite (`vite.config.js`) redirige `/api`, `/auth`, `/videos`, `/hls`, `/ws` vers le backend et `/process`, `/search` vers le pipeline IA.
 
 ## Structure
 
-- `src/components/VideoPlayer.jsx` — wrapper vidéo natif
-- `src/components/AnnotationCanvas.jsx` — overlay Canvas (flèches, rectangles, ellipses), lié au timestamp
-- `src/components/CommentThread.jsx` — commentaires horodatés
-- `src/hooks/useWebSocket.js` — client WS générique
-- `src/utils/exportAnnotations.js` — export du livrable JSON
+- `src/components/AnnotatedReviewPlayer.jsx` — composant réutilisable : player, canvas d'annotation, timeline commentaires, curseurs collaboratifs, lecture HLS chiffrée
+- `src/components/AnnotationCanvas.jsx` — overlay Canvas (flèches, rectangles, ellipses, texte), lié au timestamp, durée d'affichage configurable
+- `src/components/CommentThread.jsx` — timeline fusionnée commentaires + annotations, triée par position vidéo
+- `src/pages/PlayerPage.jsx` — page de routage, résout la source vidéo puis rend `AnnotatedReviewPlayer`
+- `src/hooks/useWebSocket.js` — client WS générique (annotations, commentaires, curseurs)
+- `src/utils/exportAnnotations.js` — export/import du JSON, format aligné avec le backend
 
 ## Workflow Git (rappel)
 
 ```bash
-git clone <url-du-repo>
-cd <repo>
-git checkout -b feature/lecteur-annotations
+git checkout -b dev/ma-feature
 # ... travail, commits réguliers ...
-git push origin feature/lecteur-annotations
-# puis Pull Request vers main sur GitHub
+git push origin dev/ma-feature
+# puis Pull Request vers develop sur GitHub — jamais de push direct sur main
 ```
-
-## Prochaines étapes possibles
-
-- Brancher le vrai serveur WS quand l'équipe infra/backend en a un
-- Ajouter l'authentification utilisateur (actuellement "Vous" en dur dans CommentThread)
-- Persister les annotations/commentaires (actuellement uniquement en mémoire côté client)
-- Gérer la suppression/édition d'annotations

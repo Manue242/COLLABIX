@@ -1,11 +1,16 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react'
 
-// Durée d'affichage des annotations en secondes
-const DISPLAY_DURATION = 5
+// Durée d'affichage par défaut (secondes) pour les annotations qui n'en précisent pas
+// (ex : anciennes annotations importées avant l'ajout de ce champ).
+const DEFAULT_DISPLAY_DURATION = 5
+
+// Chaque annotation porte sa propre durée d'affichage (a.duration, en secondes),
+// fixée au moment de sa création via le contrôle du toolbar (voir AnnotatedReviewPlayer).
+const durationOf = (a) => a.duration ?? DEFAULT_DISPLAY_DURATION
 
 export default function AnnotationCanvas({
   width, height, currentTime,
-  tool = 'arrow', color = '#F97316',
+  tool = 'arrow', color = '#F97316', duration = DEFAULT_DISPLAY_DURATION,
   annotations = [],
   onAnnotationCreate, onAnnotationDelete, onAnnotationsClear
 }) {
@@ -72,14 +77,15 @@ export default function AnnotationCanvas({
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
     const visible = annotations.filter(
-      a => Math.abs(a.timestamp - currentTime) < DISPLAY_DURATION
+      a => Math.abs(a.timestamp - currentTime) < durationOf(a)
     )
 
     visible.forEach(a => {
-      // Fade out progressif sur la dernière seconde
+      // Fade out progressif sur la dernière seconde de sa propre durée
+      const dur = durationOf(a)
       const age = Math.abs(a.timestamp - currentTime)
-      const alpha = age > DISPLAY_DURATION - 1
-        ? 1 - (age - (DISPLAY_DURATION - 1))
+      const alpha = age > dur - 1
+        ? 1 - (age - (dur - 1))
         : 1
       ctx.globalAlpha = Math.max(0, Math.min(1, alpha))
       drawShape(ctx, a)
@@ -105,7 +111,7 @@ export default function AnnotationCanvas({
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         e.preventDefault()
-        const vis = annotations.filter(a => Math.abs(a.timestamp - currentTime) < DISPLAY_DURATION)
+        const vis = annotations.filter(a => Math.abs(a.timestamp - currentTime) < durationOf(a))
         if (vis.length) onAnnotationDelete?.(vis[vis.length - 1].id)
       }
       if (e.key === 'Escape') {
@@ -140,7 +146,7 @@ export default function AnnotationCanvas({
     ctx.font = "600 18px 'Inter', -apple-system, sans-serif"
 
     const visible = annotations.filter(
-      a => a.tool === 'text' && Math.abs(a.timestamp - currentTime) < DISPLAY_DURATION
+      a => a.tool === 'text' && Math.abs(a.timestamp - currentTime) < durationOf(a)
     )
     // On parcourt en sens inverse pour prendre le plus récent en priorité
     for (let i = visible.length - 1; i >= 0; i--) {
@@ -261,7 +267,7 @@ export default function AnnotationCanvas({
       setCurrent(null); return
     }
     onAnnotationCreate?.({
-      id: crypto.randomUUID(), tool, color, start, end,
+      id: crypto.randomUUID(), tool, color, start, end, duration,
       points: tool === 'free' ? [...freePointsRef.current] : undefined,
       timestamp: currentTime, createdAt: new Date().toISOString()
     })
@@ -273,7 +279,7 @@ export default function AnnotationCanvas({
   const handleTextSubmit = () => {
     if (!textValue.trim() || !textInput) { setTextInput(null); setTextValue(''); return }
     onAnnotationCreate?.({
-      id: crypto.randomUUID(), tool: 'text', color,
+      id: crypto.randomUUID(), tool: 'text', color, duration,
       start: textInput.canvasPos,
       end:   textInput.canvasPos,
       text:  textValue.trim(),

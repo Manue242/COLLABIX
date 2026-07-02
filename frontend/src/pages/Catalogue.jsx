@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import Header from '../components/Header.jsx'
 import VideoCard from '../components/VideoCard.jsx'
 import { SkeletonGrid } from '../components/Skeleton.jsx'
 import { mockVideos, CATEGORIES } from '../data/mockVideos.js'
+import { fetchUploadedVideos, UPLOADED_CATEGORY } from '../utils/uploadedVideos.js'
 import useFakeLoading from '../hooks/useFakeLoading.js'
 
 export default function Catalogue() {
@@ -12,12 +13,16 @@ export default function Catalogue() {
   const [activeCategory, setActiveCategory] = useState(
     searchParams.get('cat') || 'Toutes'
   )
+  const [uploaded, setUploaded] = useState([])
   const loading = useFakeLoading(1000)
 
-  const categories = ['Toutes', ...CATEGORIES]
+  useEffect(() => { fetchUploadedVideos().then(setUploaded) }, [])
+
+  const allVideos = [...uploaded, ...mockVideos]
+  const categories = ['Toutes', ...CATEGORIES, ...(uploaded.length ? [UPLOADED_CATEGORY] : [])]
   const filtered = activeCategory === 'Toutes'
-    ? mockVideos
-    : mockVideos.filter(v => v.category === activeCategory)
+    ? allVideos
+    : allVideos.filter(v => v.category === activeCategory)
 
   return (
     <div className="page">

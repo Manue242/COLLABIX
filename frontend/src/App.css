@@ -734,6 +734,11 @@ a { text-decoration: none; }
 .player-tool-btn:hover { border-color: #F97316; color: #FED7AA; }
 .player-tool-btn.active { background: #F97316; border-color: #F97316; color: #fff; }
 .player-colors { display: flex; gap: 6px; align-items: center; }
+.player-duration-select {
+  margin-left: 8px; padding: 4px 8px; border-radius: 6px;
+  border: 0.5px solid #3A3A3A; background: #2A2A2A;
+  color: #D1D5DB; font-size: 12px; cursor: pointer;
+}
 .player-color-btn {
   width: 20px; height: 20px; border-radius: 50%;
   border: 2px solid transparent; cursor: pointer;
@@ -747,6 +752,24 @@ a { text-decoration: none; }
 }
 .player-video-wrap canvas {
   border-radius: 0 !important;
+}
+
+/* Curseurs collaboratifs des autres utilisateurs connectés */
+.player-remote-cursor {
+  position: absolute; pointer-events: none;
+  transform: translate(-2px, -2px);
+  z-index: 5;
+}
+.player-remote-cursor-dot {
+  display: block; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--cursor-color, #F97316);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.6);
+}
+.player-remote-cursor-label {
+  position: absolute; left: 14px; top: -2px; white-space: nowrap;
+  font-size: 10px; font-weight: 600; color: #fff;
+  background: var(--cursor-color, #F97316);
+  padding: 1px 6px; border-radius: 10px;
 }
 
 /* Contrôles */
@@ -878,6 +901,10 @@ a { text-decoration: none; }
 .ct-badge:hover { background: rgba(249,115,22,0.20); }
 
 .ct-text { font-size: 13px; color: #D1D5DB; line-height: 1.55; margin-bottom: 8px; }
+
+.ct-annotation-item { opacity: 0.92; }
+.ct-annotation-label { margin-bottom: 0; }
+.ct-kind-icon { display: inline-block; width: 16px; text-align: center; font-weight: 700; }
 
 /* Actions — tous identiques, sans bordure */
 .ct-actions { display: flex; align-items: center; gap: 2px; }

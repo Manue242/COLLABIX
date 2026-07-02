@@ -10,9 +10,11 @@ Cette partie du projet **COLLABIX** prépare une vidéo sécurisée au format HL
 
 La vidéo source est découpée en plusieurs segments `.ts`. Chaque segment est chiffré avec l’algorithme **AES-128**. Le lecteur doit récupérer une clé de déchiffrement avant de pouvoir lire le contenu.
 
-## Prérequis : FFmpeg
+> **Via Docker (recommandé)** : le service `hls-init` du `docker-compose.yml` racine automatise tout ce document — génération de la clé, de `key_info.txt`, et du flux HLS si `backend/media/source/demo-video.mp4` est présent. FFmpeg tourne dans un conteneur (`jrottenberg/ffmpeg`) ; **rien à installer sur l'hôte**. Les sections ci-dessous restent utiles pour comprendre le détail du pipeline ou l'exécuter manuellement sous Windows.
 
-FFmpeg doit être installé et accessible depuis le terminal PowerShell.
+## Prérequis : FFmpeg (génération manuelle uniquement)
+
+Pour la génération manuelle via PowerShell (hors Docker), FFmpeg doit être installé et accessible depuis le terminal.
 
 Pour vérifier l’installation, exécuter :
 
@@ -90,7 +92,12 @@ Résultat attendu :
 Clé AES-128 créée avec succès.
 Emplacement : backend/media/secrets/video.key
 Taille : 16 octets
+
+Fichier key_info.txt créé avec succès.
+Emplacement : backend/media/secrets/key_info.txt
 ```
+
+> `key_info.txt` (URI de la playlist + chemin de la clé) est désormais généré automatiquement par ce script — c'est le fichier que `generate-hls.ps1` attend via `-hls_key_info_file`.
 
 La clé est stockée ici :
 
@@ -186,21 +193,26 @@ backend/media/hls/playlist.m3u8
 backend/media/hls/segment_000.ts
 ```
 
-## Intégration avec le service d’authentification
+## Intégration avec le service d’authentification — implémenté
 
-Le service de Nina doit fournir la route suivante :
+Le flux à deux étapes suivant est en place (`backend/dependencies.py`, `backend/services/auth.py`, `backend/routers/hls.py`) :
 
 ```text
-GET /api/video/key
+GET /api/video/key-token   (session JWT requise, 24h)  → token de 60s, scope=hls-key
+GET /api/video/key         (token de clé requis)       → clé AES-128
 ```
 
-Cette route doit :
+`GET /api/video/key` :
 
-1. vérifier qu’un JWT valide est fourni ;
-2. refuser les utilisateurs non authentifiés ;
-3. appliquer l’expiration de 60 secondes ;
-4. appliquer le rate limiting ;
-5. retourner la clé AES uniquement si l’accès est autorisé.
+1. refuse tout appel sans token (`403`) ou avec un token invalide (`401`) ;
+2. refuse spécifiquement un token de session normal — seul un token émis par `/api/video/key-token` (scope `hls-key`, 60s) est accepté ;
+3. applique l’expiration de 60 secondes via ce token dédié (et non le token de session) ;
+4. applique le rate limiting (10 req/min par utilisateur) ;
+5. retourne la clé AES uniquement si l’accès est autorisé.
+
+Vérifié en direct : sans token → `403`, token de session seul → `401`, token de clé → `200`.
+
+Côté lecteur, `AnnotatedReviewPlayer.jsx` récupère le token via `xhrSetup` (hls.js) avant de demander la clé — voir [`docs/threat-model.md`](./threat-model.md) pour le modèle de menace complet et le schéma de séquence.
 
 ## Intégration avec Nginx
 

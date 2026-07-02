@@ -72,6 +72,40 @@ function formatTime(t) {
   return `${m}:${s}`
 }
 
+// Icône + libellé par outil de dessin, pour l'affichage dans le fil
+const TOOL_META = {
+  arrow:     { icon: '↗', label: 'a ajouté une flèche' },
+  rectangle: { icon: '▭', label: 'a dessiné un rectangle' },
+  ellipse:   { icon: '○', label: 'a dessiné une ellipse' },
+  free:      { icon: '✏️', label: 'a fait un tracé libre' },
+  text:      { icon: 'T', label: null },
+}
+
+// ── Composant annotation (dessin/texte sur la vidéo) ────────
+function AnnotationItem({ item, onSeek }) {
+  const meta = TOOL_META[item.tool] || TOOL_META.arrow
+  return (
+    <div className="ct-item ct-annotation-item">
+      <div className="ct-row">
+        <Avatar name={item.author} bg={item.color} />
+        <div className="ct-body">
+          <div className="ct-meta">
+            <span className="ct-name">{item.author}</span>
+            {item.createdAt && <span className="ct-ago">{timeAgo(item.createdAt)}</span>}
+            <button className="ct-badge" onClick={() => onSeek?.(item.timestamp)}>
+              <ClockIcon /> {formatTime(item.timestamp)}
+            </button>
+          </div>
+          <p className="ct-text ct-annotation-label">
+            <span className="ct-kind-icon" style={{ color: item.color }}>{meta.icon}</span>{' '}
+            {item.tool === 'text' ? <>« {item.text} »</> : meta.label}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Composant réponse ──────────────────────────────────────
 function Reply({ reply, onLike }) {
   return (
@@ -177,10 +211,17 @@ function Comment({ comment, onLike, onLikeReply, onAddReply, onSeek }) {
 }
 
 // ── Composant principal ────────────────────────────────────
-export default function CommentThread({ comments: initial = [], currentTime, onAddComment, onSeek }) {
+// `items` est la timeline fusionnée (commentaires + annotations dessinées),
+// triée par position dans la vidéo — fournie et possédée par PlayerPage.
+// Les likes/réponses ne sont pas persistés côté backend : ils vivent ici
+// dans une couche `interactions` séparée, indexée par id, pour ne jamais
+// écraser la liste reçue du parent.
+export default function CommentThread({ items = [], currentTime, onAddComment, onSeek }) {
   const { user } = useAuth()
-  const [comments, setComments] = useState(initial)
+  const [interactions, setInteractions] = useState({})
   const [text, setText] = useState('')
+
+  const getInteraction = (id) => interactions[id] || { liked: false, likes: 0, replies: [] }
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -191,33 +232,32 @@ export default function CommentThread({ comments: initial = [], currentTime, onA
       author: user?.username || 'Vous',
       timestamp: currentTime,
       createdAt: new Date().toISOString(),
-      likes: 0,
-      liked: false,
-      replies: []
+      user_id: user?.id ?? null,
     }
-    setComments(p => [c, ...p])
     onAddComment?.(c)
     setText('')
   }
 
   const toggleLike = (id) => {
-    setComments(p => p.map(c =>
-      c.id === id
-        ? { ...c, liked: !c.liked, likes: c.likes + (c.liked ? -1 : 1) }
-        : c
-    ))
+    setInteractions(p => {
+      const cur = getInteraction(id)
+      return { ...p, [id]: { ...cur, liked: !cur.liked, likes: cur.likes + (cur.liked ? -1 : 1) } }
+    })
   }
 
   const toggleLikeReply = (commentId, replyId) => {
-    setComments(p => p.map(c =>
-      c.id === commentId
-        ? { ...c, replies: c.replies.map(r =>
-            r.id === replyId
-              ? { ...r, liked: !r.liked, likes: r.likes + (r.liked ? -1 : 1) }
-              : r
-          )}
-        : c
-    ))
+    setInteractions(p => {
+      const cur = getInteraction(commentId)
+      return {
+        ...p,
+        [commentId]: {
+          ...cur,
+          replies: cur.replies.map(r =>
+            r.id === replyId ? { ...r, liked: !r.liked, likes: r.likes + (r.liked ? -1 : 1) } : r
+          ),
+        },
+      }
+    })
   }
 
   const addReply = (commentId, replyText) => {
@@ -227,21 +267,26 @@ export default function CommentThread({ comments: initial = [], currentTime, onA
       author: user?.username || 'Vous',
       createdAt: new Date().toISOString(),
       likes: 0,
-      liked: false
+      liked: false,
     }
-    setComments(p => p.map(c =>
-      c.id === commentId
-        ? { ...c, replies: [...(c.replies || []), r] }
-        : c
-    ))
+    setInteractions(p => {
+      const cur = getInteraction(commentId)
+      return { ...p, [commentId]: { ...cur, replies: [...cur.replies, r] } }
+    })
   }
+
+  const commentCount    = items.filter(i => i.kind === 'comment').length
+  const annotationCount = items.filter(i => i.kind === 'annotation').length
 
   return (
     <div className="ct-wrap">
 
       {/* Header */}
       <div className="ct-header">
-        <span className="ct-count">{comments.length} commentaire{comments.length !== 1 ? 's' : ''}</span>
+        <span className="ct-count">
+          {commentCount} commentaire{commentCount !== 1 ? 's' : ''}
+          {annotationCount > 0 && ` · ${annotationCount} annotation${annotationCount !== 1 ? 's' : ''}`}
+        </span>
         <button className="ct-sort">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M3 6h18M7 12h10M11 18h2"/>
@@ -272,12 +317,14 @@ export default function CommentThread({ comments: initial = [], currentTime, onA
         </div>
       </form>
 
-      {/* Liste */}
+      {/* Liste — timeline fusionnée, triée par position dans la vidéo */}
       <div className="ct-list">
-        {comments.map(c => (
+        {items.map(item => item.kind === 'annotation' ? (
+          <AnnotationItem key={item.id} item={item} onSeek={onSeek} />
+        ) : (
           <Comment
-            key={c.id}
-            comment={c}
+            key={item.id}
+            comment={{ ...item, ...getInteraction(item.id) }}
             onLike={toggleLike}
             onLikeReply={toggleLikeReply}
             onAddReply={addReply}

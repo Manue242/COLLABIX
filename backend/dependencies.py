@@ -28,3 +28,26 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
+
+
+async def get_key_token_user(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """
+    Variante de get_current_user pour GET /api/video/key : exige un token de
+    courte durée (60s, scope=hls-key) créé par create_key_token, pas le token
+    de session normal (24h) — c'est le coeur du modèle Zero-Trust de la clé.
+    """
+    try:
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    if payload.get("scope") != "hls-key":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token scope")
+
+    user = await auth_service.get_by_id(db, payload.get("sub"))
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
