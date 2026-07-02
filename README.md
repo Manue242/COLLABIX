@@ -122,14 +122,15 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 | `WS` | `/ws/{video_id}?user_id=` | — | Session collaborative temps réel |
 | `GET` | `/api/sessions/{video_id}/users` | — | Users connectés sur une vidéo |
 
-**HLS — Vidéo chiffrée AES-128**
+**HLS — Vidéo chiffrée AES-128 (Zero-Trust)**
 
 | Méthode | Route | Auth requise | Description |
 |---------|-------|:---:|-------------|
-| `GET` | `/hls/{fichier}` | — | Segments `.ts` + playlist `.m3u8` |
-| `GET` | `/api/video/key` | ✅ | Clé AES-128 (rate limit 10 req/min) |
+| `GET` | `/hls/{fichier}` | — | Segments `.ts` + playlist `.m3u8` (chiffrés, publics — inutiles sans la clé) |
+| `GET` | `/api/video/key-token` | ✅ session | Émet un token de clé de courte durée (60s, `scope=hls-key`) |
+| `GET` | `/api/video/key` | ✅ token de clé | Clé AES-128 — refuse un token de session normal, rate limit 10 req/min |
 
-> Les routes marquées ✅ nécessitent le header `Authorization: Bearer <token>`
+> Les routes marquées ✅ nécessitent le header `Authorization: Bearer <token>`. `/api/video/key` exige spécifiquement un token émis par `/api/video/key-token` — un token de session seul est refusé (401). Détails : [`docs/threat-model.md`](docs/threat-model.md).
 
 ### Format messages WebSocket
 
@@ -181,7 +182,7 @@ Copier `.env.example` en `.env` à la racine et remplir les valeurs.
 
 ### Tests
 
-**56 tests** — lancer via Docker (recommandé) :
+**60 tests** — lancer via Docker (recommandé) :
 
 ```bash
 docker-compose --profile test run --rm tests
@@ -189,43 +190,42 @@ docker-compose --profile test run --rm tests
 
 | Fichier | Couverture |
 |---------|-----------|
-| `test_health.py` | Santé de l'API |
-| `test_auth.py` | Register, login, me, change password |
-| `test_annotations.py` | CRUD, export, import, username, PATCH |
-| `test_videos.py` | Upload, formats invalides, taille max, liste, DELETE |
-| `test_sessions.py` | Room vide, users injectés, tri alphabétique |
-| `test_hls.py` | Auth, clé manquante, bytes exacts, rate limit, isolation users |
+| `test_health.py` | Santé de l'API (1) |
+| `test_auth.py` | Register, login, me, change password (10) |
+| `test_annotations.py` | CRUD, export, import, username, PATCH (16) |
+| `test_videos.py` | Upload, formats invalides, taille max, liste, DELETE (13) |
+| `test_sessions.py` | Room vide, users injectés, tri alphabétique (7) |
+| `test_hls.py` | Key-token, refus token de session, expiration, rate limit, isolation users (13) |
 
 La DB `collabix_test` est créée automatiquement au premier `docker-compose up --build`. Les tables sont recréées et nettoyées à chaque run.
 
-### HLS — Vidéo chiffrée AES-128
+Vérifié en conditions réelles (Postgres via Docker) : `docker compose run --rm tests` → **60/60 passent**.
 
-Prérequis : **FFmpeg** installé et accessible dans le PATH.
+### HLS — Vidéo chiffrée AES-128 (Zero-Trust)
 
-**1. Générer la clé AES-128**
+**Automatique via Docker (recommandé)** — le service `hls-init` (dans `docker-compose.yml`) génère la clé AES-128 et le flux HLS chiffré tout seul au démarrage :
+
+```bash
+docker-compose up --build
+```
+
+- Si `backend/media/source/demo-video.mp4` existe, le flux HLS complet est généré (clé, `key_info.txt`, playlist + segments chiffrés).
+- Sinon, `hls-init` génère uniquement la clé et se termine proprement (le player retombe sur le MP4 en lecture directe) — **FFmpeg sur l'hôte n'est plus nécessaire**, tout tourne dans le conteneur `jrottenberg/ffmpeg`.
+
+Le player (`AnnotatedReviewPlayer.jsx`) charge `hls.js`, récupère un token de clé de courte durée via `GET /api/video/key-token`, puis l'attache (via `xhrSetup`) à la requête de clé `/api/video/key` — repli silencieux sur le MP4 si le flux HLS n'est pas disponible.
+
+**Génération manuelle (Windows, sans Docker)** — toujours possible si besoin :
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\backend\scripts\generate-key.ps1
-```
-
-**2. Placer la vidéo source**
-
-```
-backend/media/source/demo-video.mp4
-```
-
-**3. Générer le flux HLS chiffré**
-
-```powershell
+.\backend\scripts\generate-key.ps1   # génère aussi key_info.txt
+# Placer la vidéo source dans backend/media/source/demo-video.mp4
 .\backend\scripts\generate-hls.ps1
 ```
 
-Les fichiers générés (`playlist.m3u8`, segments `.ts`, `video.key`) sont gitignorés et restent locaux.
+Les fichiers générés (`playlist.m3u8`, segments `.ts`, `video.key`, `key_info.txt`) sont gitignorés et restent locaux.
 
-Le player accède à `/hls/playlist.m3u8` et récupère la clé via `GET /api/video/key` (JWT requis).
-
-> Doc complète : [`docs/cyber1-hls-encryption.md`](docs/cyber1-hls-encryption.md)
+> Doc technique : [`docs/cyber1-hls-encryption.md`](docs/cyber1-hls-encryption.md) — Modèle de menace : [`docs/threat-model.md`](docs/threat-model.md)
 
 ### Dev local (sans Docker)
 
@@ -254,7 +254,8 @@ npm run dev
 - **React 18** + **Vite 5** — UI et bundler
 - **react-router-dom v6** — routing SPA
 - **Canvas API natif** — outil de dessin overlay sur le player
-- **WebSocket natif** — collaboration temps réel (hook `useWebSocket`)
+- **hls.js** — lecture du flux HLS chiffré, avec `xhrSetup` pour le token de clé
+- **WebSocket natif** — collaboration temps réel (hook `useWebSocket`) : annotations, commentaires et curseurs
 - **JWT** stocké en `localStorage` — auth persistante
 
 ### Pages
@@ -263,22 +264,29 @@ npm run dev
 |-------|-----------|-------------|
 | `/login` | `Login.jsx` | Connexion → JWT |
 | `/register` | `Register.jsx` | Création de compte → auto-login |
-| `/app` | `Home.jsx` | Catalogue des vidéos |
-| `/catalogue` | `Catalogue.jsx` | Navigation par catégorie |
-| `/app/player/:id` | `PlayerPage.jsx` | Player + annotations + canvas + collaboration |
-| `/upload` | `UploadVideo.jsx` | Upload vers `POST /api/videos/upload` |
+| `/app` | `Home.jsx` | Catalogue des vidéos (mock + uploadées) |
+| `/catalogue` | `Catalogue.jsx` | Navigation par catégorie, inclut « Vos vidéos » |
+| `/app/player/:id` | `PlayerPage.jsx` | Résout la source vidéo depuis l'URL, délègue à `AnnotatedReviewPlayer` |
+| `/upload` | `UploadVideo.jsx` | Upload + déclenche l'indexation IA en arrière-plan |
 | `/ai` | `AIPage.jsx` | Pipeline IA — traitement vidéo + recherche sémantique |
 
 ### Composants
 
 | Fichier | Rôle |
 |---------|------|
+| `AnnotatedReviewPlayer.jsx` | **Composant réutilisable** — tout le lecteur de revue (player, dessin, timeline commentaires/annotations, curseurs collaboratifs, HLS). Props : `videoSrc`, `hlsSrc`, `user`, `sessionId`, `title`, `category`, `onBack` — aucune dépendance à react-router ni à un contexte d'auth précis |
 | `Header.jsx` | Navigation, thème, déconnexion |
-| `VideoPlayer.jsx` | `<video>` natif avec contrôles |
-| `AnnotationCanvas.jsx` | Overlay canvas — dessin libre, formes, texte, couleurs |
-| `CommentThread.jsx` | Liste de commentaires avec timecodes |
+| `AnnotationCanvas.jsx` | Overlay canvas — dessin libre, formes, texte, couleurs, durée d'affichage par annotation |
+| `CommentThread.jsx` | Timeline fusionnée commentaires + annotations, triée par position vidéo, saut au clic |
 | `VideoCard.jsx` / `VideoRow.jsx` | Affichage catalogue |
 | `ColorPicker.jsx` | Sélecteur couleur pour les annotations |
+
+### Utilitaires
+
+| Fichier | Rôle |
+|---------|------|
+| `utils/exportAnnotations.js` | Export/import JSON aligné sur le format backend |
+| `utils/uploadedVideos.js` | Récupère `GET /api/videos/` et formate pour Home/Catalogue |
 
 ### Proxy Vite
 
@@ -332,6 +340,8 @@ Via Docker (recommandé) : inclus dans `docker-compose up --build`, accessible s
 | `POST` | `/search` | Recherche sémantique sur toutes les vidéos traitées |
 
 Le front appelle `/process` et `/search` directement — le proxy Vite redirige vers `ai-api:8080`.
+
+> Depuis `UploadVideo.jsx`, chaque upload déclenche automatiquement un `POST /process` en arrière-plan (`model_size=tiny`, `skip_translation=true` pour aller vite) — la vidéo devient cherchable via `/search` sans repasser par la page `/ai`.
 
 ### Paramètres de `/process`
 
@@ -397,3 +407,5 @@ git checkout -b data/ma-feature
 - [`docs/architecture.md`](docs/architecture.md) — Architecture globale
 - [`docs/choix-techniques.md`](docs/choix-techniques.md) — Choix techniques justifiés
 - [`docs/demo.md`](docs/demo.md) — Scénario de démo
+- [`docs/threat-model.md`](docs/threat-model.md) — Modèle de menace Zero-Trust (HLS)
+- [`docs/cyber1-hls-encryption.md`](docs/cyber1-hls-encryption.md) — Détail technique HLS/AES-128
