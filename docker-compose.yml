@@ -9,9 +9,10 @@ services:
       - "80:80" # Ton port 80 pour tes tests de logs en direct
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./media:/usr/share/nginx/html/videos:ro # CORRIGÉ : Aligné avec le dossier /videos/ de nginx.conf
+      - ./media:/usr/share/nginx/html/media
     networks:
-      - backend-network # Isolé du Front, seul le Back peut y accéder en interne
+      - frontend-network # AJOUTÉ: Indispensable pour que le navigateur puisse contacter Nginx
+      - backend-network  # Indispensable pour que Nginx puisse proxy vers le Backend
     restart: unless-stopped
 
   # ==========================================
@@ -63,11 +64,9 @@ services:
       retries: 15
       start_period: 10s
     networks:
-      - backend-network # CORRIGÉ : indispensable pour l'accès à la DB et à Nginx
+      - frontend-network # AJOUTÉ: Le backend doit écouter les requêtes externes...
+      - backend-network  # AJOUTÉ: ...et pouvoir parler à la base de données privée
 
-  # ==========================================
-  # 4. ZONE IA & INDEXATION
-  # ==========================================
   ollama:
     image: ollama/ollama:latest
     volumes:
@@ -75,8 +74,6 @@ services:
     ports:
       - "11434:11434"
     restart: unless-stopped
-    networks:
-      - backend-network
 
   ollama-init:
     image: ollama/ollama:latest
@@ -87,8 +84,6 @@ services:
     entrypoint: >
       sh -c "until ollama list >/dev/null 2>&1; do echo 'waiting for ollama...'; sleep 2; done; ollama pull llama3.2"
     restart: "no"
-    networks:
-      - backend-network
 
   ai-api:
     build: ./ai-data/indexation-semantique
@@ -103,11 +98,9 @@ services:
     depends_on:
       - ollama
     restart: unless-stopped
-    networks:
-      - backend-network
 
   # ==========================================
-  # 5. INTERFACE UTILISATEUR
+  # 5. LE FRONTEND (React - Interface Utilisateur)
   # ==========================================
   frontend:
     image: node:22-alpine
@@ -118,8 +111,8 @@ services:
     ports:
       - "5173:5173"
     environment:
-      - VITE_BACKEND_URL=http://localhost:8000 # Interroge le backend via le navigateur de l'hôte
-      - VITE_AI_URL=http://localhost:8080      # Interroge l'API IA via le navigateur de l'hôte
+      - VITE_BACKEND_URL=http://backend:8000
+      - VITE_AI_URL=http://ai-api:8080
     command: sh -c "npm install && npm run dev"
     depends_on:
       backend:
@@ -130,7 +123,7 @@ services:
       - backend-network  # Côté privé pour parler à la DB et à Nginx
 
   # ==========================================
-  # 6. ZONE DE TEST (Pour les validations automatiques)
+  # 4. ZONE DE TEST (Pour les validations automatiques)
   # ==========================================
   tests:
     build: ./backend
@@ -148,18 +141,18 @@ services:
     networks:
       - backend-network # Les tests s'exécutent en zone isolée
 
+# ==========================================
+# CONFIGURATION DES RÉSEAUX ET VOLUMES
+# ==========================================
+networks:
+  frontend-network:
+    driver: bridge # Zone d'accès Utilisateur <-> Frontend/Backend/Nginx
+  backend-network:
+    driver: bridge # Zone de Confiance (VPC) Backend <-> DB <-> Nginx Media
+
 volumes:
   postgres_data:
   ollama_models:
   hf_cache:
   whisper_cache:
   chroma_data:
-
-# ==========================================
-# CONFIGURATION DES RÉSEAUX ET VOLUMES
-# ==========================================
-networks:
-  frontend-network:
-    driver: bridge # Zone d'accès Utilisateur <-> Frontend/Backend
-  backend-network:
-    driver: bridge # Zone de Confiance (VPC) Backend <-> DB <-> Nginx Media
