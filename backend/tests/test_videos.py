@@ -126,3 +126,39 @@ async def test_delete_already_deleted_video(client):
 
     r = await client.delete(f"/api/videos/{name}")
     assert r.status_code == 404
+
+
+# --- Metadata (title/description/category) ---
+
+async def test_upload_persists_metadata(client):
+    name, data, ct = make_fake_video("with_meta.mp4")
+    r = await client.post(
+        "/api/videos/upload",
+        files={"file": (name, data, ct)},
+        data={"title": "Mon titre", "description": "Une description", "category": "Formations"},
+    )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["title"] == "Mon titre"
+    assert body["category"] == "Formations"
+
+    listed = {v["filename"]: v for v in (await client.get("/api/videos/")).json()}
+    assert listed[name]["title"] == "Mon titre"
+    assert listed[name]["description"] == "Une description"
+
+
+async def test_patch_video_updates_metadata(client):
+    name, data, ct = make_fake_video("editable.mp4")
+    await client.post("/api/videos/upload", files={"file": (name, data, ct)}, data={"title": "Ancien titre"})
+
+    r = await client.patch(f"/api/videos/{name}", data={"title": "Nouveau titre"})
+    assert r.status_code == 200
+    assert r.json()["title"] == "Nouveau titre"
+
+    listed = {v["filename"]: v for v in (await client.get("/api/videos/")).json()}
+    assert listed[name]["title"] == "Nouveau titre"
+
+
+async def test_patch_nonexistent_video_returns_404(client):
+    r = await client.patch("/api/videos/ghost_edit.mp4", data={"title": "x"})
+    assert r.status_code == 404

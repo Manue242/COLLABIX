@@ -50,6 +50,9 @@ export default function UploadVideo() {
     try {
       const formData = new FormData()
       formData.append('file', videoFile)
+      formData.append('title', form.title)
+      formData.append('description', form.description)
+      formData.append('category', form.category)
       const res = await fetch('/api/videos/upload', { method: 'POST', body: formData })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))

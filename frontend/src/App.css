@@ -596,6 +596,44 @@ a { text-decoration: none; }
   padding: 2px 8px; border-radius: 4px;
 }
 .vcard-progress { height: 3px; background: #F3F4F6; }
+
+.vcard-manage {
+  position: absolute; top: 8px; left: 8px; z-index: 2;
+  display: flex; gap: 4px;
+}
+.vcard-manage-btn {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: rgba(0,0,0,0.6); border: none; cursor: pointer;
+  font-size: 12px; display: flex; align-items: center; justify-content: center;
+}
+.vcard-manage-btn:hover { background: rgba(0,0,0,0.85); }
+
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal-card {
+  background: #1A1A1A; border: 0.5px solid #2A2A2A; border-radius: 12px;
+  padding: 20px; width: 380px; max-width: 90vw;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.modal-card h2 { margin: 0; font-size: 16px; color: #F9FAFB; }
+.modal-card label {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 12px; color: #9CA3AF;
+}
+.modal-card input, .modal-card textarea, .modal-card select {
+  background: #2A2A2A; border: 0.5px solid #3A3A3A; border-radius: 6px;
+  padding: 7px 10px; color: #F3F4F6; font-size: 13px; outline: none;
+}
+.modal-card input:focus, .modal-card textarea:focus, .modal-card select:focus { border-color: #F97316; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.modal-actions button {
+  padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px;
+  background: #2A2A2A; color: #D1D5DB;
+}
+.modal-actions button.primary { background: #F97316; color: #fff; }
 .vcard-progress-fill { height: 3px; background: #F97316; transition: width 0.3s; }
 .vcard-body { padding: 10px 12px 12px; }
 .vcard-title {

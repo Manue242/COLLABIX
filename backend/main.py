@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from database import engine, Base
 import models.user  # noqa: F401 — requis pour create_all
 import models.annotation  # noqa: F401 — requis pour create_all
+import models.video  # noqa: F401 — requis pour create_all
 from routers import health, annotations, ws, videos, auth, sessions, hls
 
 load_dotenv()
