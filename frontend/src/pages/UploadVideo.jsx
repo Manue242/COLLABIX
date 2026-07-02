@@ -60,18 +60,22 @@ export default function UploadVideo() {
       }
       const { filename } = await res.json()
 
-      // Indexation IA en arrière-plan (transcription + recherche sémantique) —
-      // ne bloque pas la navigation, le pipeline prend plusieurs minutes.
-      // Sans ça une vidéo uploadée ici n'est jamais indexée (seul /ai le fait).
+      // Indexation IA complète en arrière-plan (transcription, traduction, résumé,
+      // chapitres, mots-clés, recherche sémantique) — ne bloque pas la navigation,
+      // le pipeline prend plusieurs minutes. Sans ça une vidéo uploadée ici n'est
+      // jamais indexée (seul /ai le faisait avant).
       const aiForm = new FormData()
       aiForm.append('file', videoFile)
-      fetch('/process?target_lang=fr&model_size=tiny&skip_translation=true', {
+      fetch('/process?target_lang=fr&model_size=tiny', {
         method: 'POST',
         body: aiForm,
       })
-        .then(r => (r.ok ? r.json() : null))
+        .then(r => {
+          if (!r.ok) throw new Error(`Indexation IA échouée (${r.status})`)
+          return r.json()
+        })
         .then(data => { if (data?.chapters) cacheChapters(filename, data.chapters) })
-        .catch(() => {})
+        .catch(err => console.error('Indexation IA en arrière-plan :', err))
 
       navigate(`/app/player/${filename}`)
     } catch (err) {
