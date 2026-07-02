@@ -36,17 +36,47 @@
 
 ## Frontend
 
-> _À compléter par le dev frontend_
+### React 18 + Vite 5.1
+- Framework UI déclaratif avec hooks modernes (`useState`, `useEffect`, `useRef`, `useCallback`, `useMemo`)
+- Vite 5.1 comme bundler : démarrage instantané, HMR (Hot Module Replacement) en développement
+- Composants fonctionnels uniquement — architecture claire et testable
+- Routing via React Router v6 avec routes protégées par rôle
 
-<!--
-  Justifier ici :
-  - Choix du player vidéo (react-player, video.js, natif...)
-  - Choix de la librairie de dessin (fabric.js, konva, canvas natif...)
-  - Gestion de l'état global
-  - Librairie UI si utilisée
--->
+### CSS custom (sans framework UI)
+- Zéro dépendance à Tailwind, Bootstrap ou MUI — contrôle total sur le rendu
+- CSS variables pour le theming (`--bg`, `--surface`, `--primary`, etc.) : un seul fichier `theme.css` pilote light et dark mode
+- `[data-theme="dark"]` sur `<html>` pour le dark mode — standard natif, performant
+- Transitions fluides via CSS (`transition: background 0.3s ease`) sans JavaScript
+
+### Double canvas natif pour les annotations
+- Deux `<canvas>` superposés : un pour les annotations finalisées, un pour le dessin en cours (preview)
+- Le canvas de preview est effacé et redessiné à chaque `mousemove` — fluidité maximale sans redessiner toutes les annotations
+- Pas de librairie tierce (fabric.js, konva) — canvas natif pour un contrôle total et zéro overhead
+- `ResizeObserver` pour recalibrer les dimensions en temps réel (redimensionnement fenêtre, plein écran)
+
+### Context API pour l'état global
+- `AuthContext` : session utilisateur, rôle (`admin` / `user`), login/logout
+- `ThemeContext` : préférence light/dark persistée en `localStorage`
+- Pas de Redux — la complexité de l'état ne le justifie pas pour ce périmètre
+
+### Lecteur vidéo natif HTML5
+- Élément `<video>` natif sans react-player ni video.js — contrôle total sur les événements
+- `object-fit: contain` : la vidéo n'est jamais coupée, proportions toujours respectées
+- Fullscreen API native pour le plein écran
+- Miniatures générées côté client : `<video preload="metadata">` seeké à 2s → frame affichée sans canvas (pas de problème CORS)
+
+### WebSocket (hook custom `useWebSocket.js`)
+- Connexion, écoute des messages et envoi d'événements encapsulés dans un hook React
+- Activé uniquement si `VITE_WS_URL` est défini — l'app fonctionne en mode solo sans configuration
+- Protocole d'événements aligné avec le backend FastAPI : `annotation`, `annotationDelete`, `comment`
+
+### Export JSON
+- Format structuré et réutilisable : `id`, `tool`, `color`, `start`, `end`, `timestamp`, `createdAt`
+- Téléchargement via `URL.createObjectURL(Blob)` — natif, sans dépendance
+- Conçu pour être réimportable et exploitable côté backend ou autre outil
 
 ---
+
 
 ## AI / Data
 
